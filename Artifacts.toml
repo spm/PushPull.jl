@@ -1,0 +1,18 @@
+[[pp_lib]]
+arch = "x86_64"
+os = "linux"
+git-tree-sha1 = "095a3f9b3e0d3d2d121686c8e86e0adf3d4b7191"
+lazy = true
+    [[pp_lib.download]]
+    sha256 = "90f0290468d63a6f235c6679c73a00c79f11d3e46fab79846e3fc3ed4d939e0a"
+    url = "https://www.fil.ion.ucl.ac.uk/~john/pp.tar.gz"
+
+[[pp_lib]]
+arch = "x86_64"
+os = "windows"
+git-tree-sha1 = "095a3f9b3e0d3d2d121686c8e86e0adf3d4b7191"
+lazy = true
+    [[pp_lib.download]]
+    sha256 = "90f0290468d63a6f235c6679c73a00c79f11d3e46fab79846e3fc3ed4d939e0a"
+    url = "https://www.fil.ion.ucl.ac.uk/~john/pp.tar.gz"
+
