@@ -1,5 +1,4 @@
 module PushPull
-#include("artifacts.jl")
 include("locations.jl")
 include("pushpull_general.jl")
 include("pushpull_init.jl")
