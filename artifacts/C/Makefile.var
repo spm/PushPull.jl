@@ -48,7 +48,7 @@ endif
 ifeq (Linux,$(PLATFORM))
   MEXBIN    ?= mex
   #MEXOPTS   += CFLAGS='$$CFLAGS $(WARNFLAG)'
-  NVCC       = nvcc -m64
+  NVCC       = nvcc.exe -m64
   PTXDIR     = ../lib/ptxa64
   LIBDIR     = ../lib/liba64
   CC         = gcc
