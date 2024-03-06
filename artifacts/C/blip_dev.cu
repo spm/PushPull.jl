@@ -148,6 +148,47 @@ __device__ void blip_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, floa
     u[ii] += t/(w0*1.000001);
 }
 
+__device__ void blip_nopad_dev(const USIZE_t *d, float *u,
+                                const float *g, const float *aa, const float *bb, const float *ab, const float *s)
+{
+    float t, v0 = s[0], v1 = s[1], v2 = s[2], w, w0, sv = v0+v1+v2, u0;
+    SSIZE_t o4, o5;
+
+    o4  = d[0];
+    o5  = 2*o4;
+    u0  = u[0];
+    t   = g[0] - (((u[-o5]-u0)* bb[-o4]        + (u[o5]-u0)* bb[o4])/(-4)
+                + ((u[-o4]-u0)*(ab[-o4]-ab[0]) + (u[o4]-u0)*(ab[0]-ab[o4]))/2
+                +          u0 *(aa[0]+(ab[-o4]-ab[o4])/2));
+    w0  = aa[0] + (bb[-o4] + bb[o4])/4;
+
+    w0 -= 2*(w = -4*v1*sv);
+    t  -= ((u[-o4]-u0)+(u[o4]-u0))*w;
+    w0 -= 2*(w = v1*v1);
+    t  -= ((u[-o5]-u0)+(u[o5]-u0))*w;
+
+    o5  = d[0]*d[1];
+    w0 -= 4*(w = 2*v0*v2);
+    t  -= ((u[-o5-1]-u0) + (u[-o5+1]-u0) + (u[o5-1]-u0) + (u[o5+1]-u0))*w;
+    w0 -= 4*(w = 2*v0*v1);
+    t  -= ((u[-o4-1]-u0) + (u[-o4+1]-u0) + (u[o4-1]-u0) + (u[o4+1]-u0))*w;
+    w0 -= 4*(w = 2*v1*v2);
+    t  -= ((u[-o4-o5]-u0) + (u[-o4+o5]-u0) + (u[o4-o5]-u0) + (u[o4+o5]-u0))*w;
+
+    w0 -= 2*(w = -4*v2*sv);
+    t  -= ((u[-o5]-u0) + (u[o5]-u0))*w;
+    o5  = 2*o5;
+    w0 -= 2*(w = v0*v0);
+    t  -= ((u[-2]-u0) + (u[2]-u0))*w;
+    w0 -= 2*(w = v2*v2);
+    t  -= ((u[-o5]-u0) + (u[o5]-u0))*w;
+    w0 -= 4*(w = 2*v0*v1);
+    t  -= ((u[-o4-1]-u0) + (u[-o4+1]-u0) + (u[o4-1]-u0) + (u[o4+1]-u0))*w;
+    w0 -= 2*(w = -4*v0*sv);
+    t  -= ((u[-1]-u0) + (u[1]-u0))*w;
+    u[0] += t/(w0*1.000001);
+}
+
 
 __device__ float hu_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, const float *u,
                         const float *aa, const float *bb, const float *ab, const float *s)

@@ -55,12 +55,12 @@ function basedir()
     if true
         ## Use the following for determining SHA values for Artifacts.toml
         #using Tar, Inflate, SHA
-        #filename = "pp.tar.gz";
+        #filename = "pp_lib.tar.gz";
         #println("sha256 = \"", bytes2hex(open(sha256, filename)), "\"");
         #println("    git-tree-sha1 = \"", Tar.tree_hash(IOBuffer(inflate_gzip(filename))), "\"");
 
         # This is the path to the Artifacts.toml we will manipulate
-        artifact_toml = joinpath(@__DIR__, "..", "Artifacts.toml")
+        artifact_toml = find_artifacts_toml(@__FILE__)
 
         # Query the `Artifacts.toml` file for the hash bound to the name "pp_lib"
         # (returns `nothing` if no such binding exists)

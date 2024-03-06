@@ -39,16 +39,16 @@ WARNFLAG     = -Wall -Wextra -Wpedantic
 USE_OPENMP  ?= 0
 SOSUF        = so
 
+
 ifndef PLATFORM
   PLATFORM   = $(shell $(UNAME))
 endif
 
 ##### Linux #####
 ifeq (Linux,$(PLATFORM))
-  MEXEXT     = mexa64
   MEXBIN    ?= mex
   #MEXOPTS   += CFLAGS='$$CFLAGS $(WARNFLAG)'
-  NVCC       = nvcc.exe -m64
+  NVCC       = nvcc -m64
   PTXDIR     = ../lib/ptxa64
   LIBDIR     = ../lib/liba64
   CC         = gcc
@@ -56,13 +56,11 @@ endif
 
 ##### macOS #####
 ifeq (Darwin,$(PLATFORM))
-  MEXEXT     = mexmaci64
   MEXBIN    ?= mex
   # https://stackoverflow.com/questions/37362414/
   OMPFLAG    = -fopenmp=libiomp5
 endif
 ifeq (arm64,$(PLATFORM))
-  MEXEXT     = mexmaca64
   MEXBIN    ?= mex
   # https://stackoverflow.com/questions/37362414/
   OMPFLAG    = -fopenmp=libiomp5
@@ -71,7 +69,6 @@ endif
 
 ##### Windows #####
 ifeq (MINGW32,$(word 1,$(subst _, ,$(PLATFORM)))) # MSVC
-  MEXEXT     = mexw32
   PTXDIR     = ../lib/ptxw32
   LIBDIR     = ../lib/libw32
   MEXBIN    ?= cmd /c "mex.bat
@@ -86,7 +83,6 @@ ifeq (MINGW32,$(word 1,$(subst _, ,$(PLATFORM)))) # MSVC
   NVCC       = nvcc.exe -m32
 endif
 ifeq (MINGW64,$(word 1,$(subst _, ,$(PLATFORM)))) # MSVC
-  MEXEXT     = mexw64
   PTXDIR     = ../lib/ptxw64
   LIBDIR     = ../lib/libw64
   MEXBIN    ?= mex
@@ -97,49 +93,12 @@ ifeq (MINGW64,$(word 1,$(subst _, ,$(PLATFORM)))) # MSVC
   NVCC       = nvcc.exe -m64
 endif
 ifeq (MSYS,$(word 1,$(subst _, ,$(PLATFORM)))) # GCC
-  MEXEXT     = mexw64
   PTXDIR     = ../lib/ptxw64
   LIBDIR     = ../lib/libw64
   MEXBIN    ?= mex
   MEXOPTS   += -DSPM_WIN32
   SOSUF      = dll
   MOSUF      = obj
-endif
-
-#### Octave ####
-ifeq (octave,$(PLATFORM))
-  MEXEXT     = mex
-  MEXBIN    ?= mkoctfile
-  MEXOPTS    = --mex -DOCTAVE_MEX_FILE
-  #MEXOPTS   += $(WARNFLAG)
-  override PLATFORM = $(shell $(UNAME))
-  ifeq (MINGW64,$(word 1,$(subst _, ,$(PLATFORM))))
-    MEXOPTS += -DSPM_WIN32
-  endif
-  ifeq (MSYS,$(word 1,$(subst _, ,$(PLATFORM))))
-    MEXOPTS += -DSPM_WIN32
-  endif
-  OMPFLAG    =
-endif
-
-#### Otherwise ####
-ifndef MEXEXT
-  $(error Unknowm platform $(PLATFORM))
-endif
-
-ifeq (1,$(USE_OPENMP))
-  ifneq ($(OMPFLAG),)
-    MEXOPTS += CFLAGS='$$CFLAGS $(OMPFLAG)' LDFLAGS='$$LDFLAGS $(OMPFLAG)'
-  endif
-endif
-MEX          = $(MEXBIN) $(MEXOPTS)
-SUF          = $(MEXEXT)
-
-MATLABROOT   = $(realpath $(shell which $(firstword $(MEXBIN))))
-ifeq (mex,$(MEXEXT))
-  SPMEXE    ?= ../bin/spm-octave
-else
-  SPMEXE    ?= ../bin/spm-matlab
 endif
 
 define verb
@@ -149,3 +108,4 @@ define verb
 	@ echo "_____________________________________________________________"
 	@ echo ""
 endef
+
