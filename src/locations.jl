@@ -49,7 +49,7 @@ function ptxdir()
     return joinpath(basedir(), "ptx" * getext())
 end
 
-using Pkg.Artifacts
+using LazyArtifacts
 
 function basedir()
     if true
