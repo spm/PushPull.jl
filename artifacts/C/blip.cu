@@ -1,10 +1,6 @@
 #define CUDA
 #include "cuheader.h"
 #include "blip_dev.cu"
-/*
-    MAXD - maximum filter size
-    MAXN - maximum number of gradient fields
-*/
 
 __global__ void blip(float *u, const USIZE_t *d, const float *g,
                      const float *aa, const float *bb, const float *ab,

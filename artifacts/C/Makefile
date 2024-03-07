@@ -3,8 +3,8 @@ include Makefile.var
 
 #PTXFILES = pushpull.ptx lbessi.ptx operator.ptx shootfun.ptx TVdenoise3d.ptx TVdenoise2d.ptx TVdenoise2d_old.ptx
 PTXFILES = pushpull.ptx lbessi.ptx sparse_operator.ptx TVdenoise3d.ptx TVdenoise2d.ptx blip.ptx
-LIBFILES = pushpull.$(SOSUF) TVdenoise3d.$(SOSUF) sparse_operator.$(SOSUF)
-
+LIBFILES = pushpull.$(SOSUF) TVdenoise3d.$(SOSUF) sparse_operator.$(SOSUF) blip.$(SOSUF)
+PPLIB    = ../pp_lib.tar.gz
 #CC       = x86_64-w64-mingw32-gcc-win32
 
 all: $(PTXFILES) $(LIBFILES)
@@ -12,6 +12,8 @@ all: $(PTXFILES) $(LIBFILES)
 install: all $(PTXDIR) $(LIBDIR)
 	$(COPY) $(PTXFILES) $(PTXDIR)
 	$(COPY) $(LIBFILES) $(LIBDIR)
+	tar -C .. -cvf - lib | gzip -v > $(PPLIB)
+	julia get_sha.jl $(PPLIB)
 
 clean:
 	$(DEL) $(PTXFILES) $(LIBFILES)
@@ -19,9 +21,6 @@ clean:
 pushpull.$EXT : pushpull.c pushpull_dev.cu
 
 blip.ptx: blip.cu blip_dev.cu
-
-noise:
-	echo $(LIBDIR)
 
 
 #pushpull.$EXT : pushpull.c pushpull_dev.cu
@@ -44,7 +43,6 @@ noise:
 #	$(CC) -shared -Wl,-soname,TVdenoise3.so -o TVdenoise3.so TVdenoise3.o
 
 %.so : %.c
-	echo $(PLATFORM)
 	$(CC) -O4 -shared -fPIC -Wl,-soname,$@ -o $@ -lm $<
 
 %.dll : %.c
@@ -54,7 +52,6 @@ noise:
 #	gcc -O4 -shared -fPIC -Wl,-soname,$@ -o $@ -lm $<
 
 %.ptx : %.cu
-	echo $(PLATFORM)
 	$(NVCC) -ptx --ptxas-options --verbose -O3 $< 
 
 $(PTXDIR) :
