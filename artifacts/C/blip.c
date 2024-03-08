@@ -65,6 +65,9 @@ void blip(float *u, const USIZE_t *d, const float *g,
     i1 = max(i0, d[0]-3);
     j1 = max(j0, d[1]-3);
     k1 = max(k0, d[2]-3);
+
+    blip_pad(0 ,  0,  0, d[0], d[1], d[2], u, d, g, aa, bb, ab, s);
+    /*
     blip_pad(0 ,  0,  0, d[0], d[1],   k0, u, d, g, aa, bb, ab, s);
     blip_pad(0,   0, k0, d[0],   j0,   k1, u, d, g, aa, bb, ab, s);
     blip_pad(0,  j0, k0,   i0,   j1,   k1, u, d, g, aa, bb, ab, s);
@@ -72,6 +75,7 @@ void blip(float *u, const USIZE_t *d, const float *g,
     blip_pad(i1, j0, k0, d[0],   j1,   k1, u, d, g, aa, bb, ab, s);
     blip_pad(0,  j1, k0, d[0], d[1],   k1, u, d, g, aa, bb, ab, s);
     blip_pad(0,   0, k1, d[0], d[1], d[2], u, d, g, aa, bb, ab, s);
+    */
 }
 
 
