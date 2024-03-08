@@ -1,18 +1,27 @@
 using CUDA
 
-# Needed for older Julia versions (e.g. 1.4)                                                                            import Base.cumprod
+# Needed for older Julia versions (e.g. 1.4)
+import Base.cumprod
 cumprod(d::Tuple)=(cumprod([d...,])...,)
 
-tvmod      = CuModuleFile(joinpath(ptxdir(), "TVdenoise3d.ptx"));
-cutv3d     = CuFunction(tvmod, "_Z11TVdenoise3dPfPKf")
+if CUDA.functional()
+    tvmod      = CuModuleFile(joinpath(ptxdir(), "TVdenoise3d.ptx"));
+    cutv3d     = CuFunction(tvmod, "_Z11TVdenoise3dPfPKf")
+end
 
-function TVdenoise(x::Union{CuArray{Float32,3},CuArray{Float32,4}}, nit::Integer=1, vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0), lambda::Union{Real,Array{Real}}=1.0f0)
+
+function TVdenoise(x::Union{CuArray{Float32,3},CuArray{Float32,4}}, nit::Integer=1,
+                   vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0), lambda::Union{Real,Array{Real}}=1.0f0)
     y = deepcopy(x)
     y = TVdenoise!(x,y,nit,vox,lambda)
     return y
 end
 
-function TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}}, y::Union{CuArray{Float32,3},CuArray{Float32,4}}, nit::Integer, vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0), lambdap::Union{Real,Array{Real}}=1.0f0, lambdal::Union{Real,Array{Real}}=1.0f0)
+
+function TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}},
+                    y::Union{CuArray{Float32,3},CuArray{Float32,4}},
+                    nit::Integer, vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0),
+                    lambdap::Union{Real,Array{Real}}=1.0f0, lambdal::Union{Real,Array{Real}}=1.0f0)
 
     nlam = 20 # A constant from the .cu
 
@@ -70,6 +79,8 @@ end
 
 ==========================================================================#
 function getthreads(d::CuDim, fun::CuFunction, shmem::Integer=0, dev::CuDevice=CUDA.device())
+    # Additional complications because this code uses 3D threads and blocks
+    # rather than the much simpler 1D implementation
 
     config = launch_configuration(fun; shmem=shmem, max_threads=prod(d))
     nmax   = config.threads

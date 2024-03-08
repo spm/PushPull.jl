@@ -1,7 +1,6 @@
 include Makefile.var
 
 
-#PTXFILES = pushpull.ptx lbessi.ptx operator.ptx shootfun.ptx TVdenoise3d.ptx TVdenoise2d.ptx TVdenoise2d_old.ptx
 PTXFILES = pushpull.ptx lbessi.ptx sparse_operator.ptx TVdenoise3d.ptx TVdenoise2d.ptx blip.ptx
 LIBFILES = pushpull.$(SOSUF) TVdenoise3d.$(SOSUF) sparse_operator.$(SOSUF) blip.$(SOSUF)
 PPLIB    = ../pp_lib.tar.gz

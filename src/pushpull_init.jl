@@ -3,7 +3,7 @@ function __init__()
 
     if CUDA.functional()
         # If there's no GPU, then CuModuleFile will not run so the various globals
-        # are remain undefined. This should not matter because no data should be
+        # remain undefined. This should not matter because no data should be
         # transferred to GPU and none of the various GPU functions are called.
         # Instead, users will see the following warning:
         #   ┌ Info: The CUDA function is being called but CUDA.jl is not functional.

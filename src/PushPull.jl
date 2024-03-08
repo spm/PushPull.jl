@@ -12,6 +12,6 @@ include("operator_sparse.jl")
 include("Denoise.jl")
 export pull, push, pull_grad, show, affine_pull, affine_push, id, Settings
 export registration_operator, vel2mom, vel2mom!, mom2vel, sparsify, greens, kernel, dct, dst, idct, idst, dct!, dst!, idct!, idst!
-export TVdenoise, TVdenoise!
+export Denoise
 end
 
