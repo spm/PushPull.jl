@@ -69,7 +69,7 @@ function basedir()
         lib         = artifact"pp_lib"
         return joinpath(lib, "lib")
     else
-        return joinpath(@__DIR__, "..", "..", "lib")
+        return joinpath(@__DIR__, "..", "..", "artifacts", "lib")
     end
 end
 
