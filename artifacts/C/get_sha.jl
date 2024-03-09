@@ -11,5 +11,5 @@ println("    sha256 = \"", sha2, "\"");
 
 println("\nor run the following (in Unix):")
 artif = "../../Artifacts.toml"
-println("\ncp ", artif, " Artifacts.prev ; sed < Artifacts.prev '/git-tree-sha1/s/\"[0-9,a-c].*\"/\"", sha1,"\"/' | sed '/sha256/s/\"[0-9,a-c].*\"/\"",sha2,"\"/' > ", artif, "\n")
+println("\ncp ", artif, " Artifacts.prev ; sed < Artifacts.prev '/git-tree-sha1/s/\"[0-9,a-f].*\"/\"", sha1,"\"/' | sed '/sha256/s/\"[0-9,a-f].*\"/\"",sha2,"\"/' > ", artif, "\n")
 
