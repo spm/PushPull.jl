@@ -33,33 +33,26 @@ void vel2mom_edge(USIZE_t i_start, USIZE_t i_stop, USIZE_t j_start, USIZE_t j_st
                 vel2mom_padded1(i,j,k, u, d, v,  offset, length, values, patch_indices, dp, bnd);
 }
 
+#define MIN(a,b) ((signed)(a)<(signed)(b) ? (a) : (b))
+#define MAX(a,b) ((signed)(a)>(signed)(b) ? (a) : (b))
 
 void vel2mom(float *u, const float* v, const USIZE_t *d, const USIZE_t *dp,
              const int *offset, const int *length,
              const float *values, const int *indices, const int *patch_indices, const int *bnd)
 {
     USIZE_t rs[3], re[3], i;
-    int sep_middle = 1;
     for(i=0; i<3; i++)
     {
-        rs[i] = (dp[i]-1)/2;
-        re[i] = d[i]-(dp[i]-1)/2;
-        if (re[i]<rs[i]) sep_middle = 0;
+        rs[i] = MIN((dp[i]-1)/2,d[i]);
+        re[i] = MAX(rs[i],d[i]-(dp[i]-1)/2);
     }
-    if(sep_middle==0)
-    {
-        vel2mom_edge(   0 , d[0],    0 , d[1],    0,   d[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
-    }
-    else
-    {
-        vel2mom_edge(   0 , d[0],    0 , d[1],    0 , rs[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
-        vel2mom_edge(   0 , d[0],    0 ,rs[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
-        vel2mom_edge(   0 ,rs[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
-        vel2mom_midd(rs[0],re[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, indices);
-        vel2mom_edge(re[0], d[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
-        vel2mom_edge(   0 , d[0], re[1], d[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
-        vel2mom_edge(   0 , d[0],    0 , d[1], re[2],  d[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
-    }
+    vel2mom_edge(   0 , d[0],    0 , d[1],    0 , rs[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
+    vel2mom_edge(   0 , d[0],    0 ,rs[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
+    vel2mom_edge(   0 ,rs[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
+    vel2mom_midd(rs[0],re[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, indices);
+    vel2mom_edge(re[0], d[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
+    vel2mom_edge(   0 , d[0], re[1], d[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
+    vel2mom_edge(   0 , d[0],    0 , d[1], re[2],  d[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
 }
 
 
