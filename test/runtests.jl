@@ -1,6 +1,8 @@
 using PushPull
 using Test
 using CUDA
+using Flux
+
 function gpu_cpu_K(d::NTuple{3,Int64}, reg::Vector{<:AbstractFloat})
     vx = [1.2, 0.7, 1.5]
     u  = randn(Float32,(d...,3))
@@ -50,7 +52,6 @@ function operator_consistency(d::NTuple{3,Int64}, reg::Vector{<:AbstractFloat}, 
     return sum((u1[:].-u0[:]).^2)./sum(u0[:].^2)
 end
 
-using Flux
 function test_grad(fun,ϕ)
 
     function numerical_grad(fun, θ₀)
