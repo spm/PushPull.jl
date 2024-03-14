@@ -1,7 +1,7 @@
 using PushPull
 using Test
 using CUDA
-using Flux
+using Zygote
 
 function gpu_cpu_K(d::NTuple{3,Int64}, reg::Vector{<:AbstractFloat})
     vx = [1.2, 0.7, 1.5]
