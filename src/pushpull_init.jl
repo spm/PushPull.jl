@@ -30,6 +30,8 @@ function __init__()
 
     # Global used by pushpull_cpu.jl
     global pplib = Libdl.dlopen(libfile("pushpull"))
+
+    # Global used by sparse_operator.jl
     global oplib = Libdl.dlopen(libfile("sparse_operator"))
 
     return nothing

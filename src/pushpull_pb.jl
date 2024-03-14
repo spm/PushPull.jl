@@ -2,6 +2,9 @@ using ChainRulesCore
 # Code could be improved using @thunk
 # https://juliadiff.org/ChainRulesCore.jl/dev/rule_author/writing_good_rules.html
 
+# TODO: Analytical gradients of affine_pull & affine_push
+#       Check whether the thunk/unthunk are optimal
+
 """
 Allows automatic differentiation to be applied to `pull`
 """

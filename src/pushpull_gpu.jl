@@ -16,7 +16,7 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function pull(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())
+function pull(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
     global cuPull
 
@@ -59,7 +59,7 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function pull_grad(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())
+function pull_grad(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
     global cuPullGrad
 
@@ -100,7 +100,7 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function pull_hess(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())
+function pull_hess(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
     global cuPullHess
 
@@ -143,7 +143,8 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function push(f₁::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer}, sett::Settings = Settings())
+function push(f₁::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer},
+              sett::Settings = Settings())::CuArray{Float32}
 
     global cuPush
 
@@ -189,7 +190,8 @@ Requirements
 * `∇f` and `ϕ` must have the same volume dimensions
 
 """
-function push_grad(∇f::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer}, sett::Settings = Settings())
+function push_grad(∇f::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer},
+                   sett::Settings = Settings())::CuArray{Float32}
 
     global cuPushGrad
 
@@ -235,6 +237,7 @@ function gpusettings(d₀, n₁, sett::Settings)
 
     setindex!(CuGlobal{NTuple{3,UInt64}}(ppmod,"d0"),  UInt64.(d₀[1:3]))
     setindex!(CuGlobal{UInt64}(ppmod,"n1"),            UInt64(n₁))
+    nothing
 end
 
 """
@@ -243,7 +246,8 @@ affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Intege
 Work in progress
 
 """
-function affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer}, sett::Settings = Settings())
+function affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer},
+                     sett::Settings = Settings())::CuArray{Float32}
 
     global cuAffPull
 
@@ -280,7 +284,8 @@ affine_push(f₁::CuArray{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Intege
 Work in progress
 
 """
-function affine_push(f₁::CuArray{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer}, sett::Settings = Settings())
+function affine_push(f₁::CuArray{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer},
+                     sett::Settings = Settings())::CuArray{Float32}
 
     global cuAffPush
 
@@ -318,6 +323,7 @@ function gpusettings_aff(d₁,Aff)
     Aff[:,4] .= sum(Aff,dims=2) .- 1.0  # Adjust for 0-offset (CUDA code)
     Aff = (Float32.(Aff)[:]...,)
     setindex!(CuGlobal{NTuple{12,Float32}}(ppmod,"Aff"),  Aff)
+    nothing
 end
 
 function threadblocks(fun,n)
@@ -326,3 +332,4 @@ function threadblocks(fun,n)
     blocks  = Int32(ceil(n./threads))
     return threads, blocks
 end
+

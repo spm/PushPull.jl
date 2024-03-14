@@ -13,7 +13,8 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function pull(f₀::Array{Float32}, ϕ::Array{Float32}, sett::Settings = Settings())
+function pull(f₀::Array{Float32}, ϕ::Array{Float32},
+              sett::Settings = Settings())::Array{Float32}
 
     global pplib
 
@@ -61,7 +62,8 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32}, sett::Settings = Settings())
+function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32},
+                   sett::Settings = Settings())::Array{Float32}
 
     global pplib
 
@@ -99,7 +101,8 @@ function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32}, sett::Settings = Se
 end
 
 
-function pull_hess(f₀::Array{Float32}, ϕ::Array{Float32}, sett::Settings = Settings())
+function pull_hess(f₀::Array{Float32}, ϕ::Array{Float32},
+                   sett::Settings = Settings())::Array{Float32}
 
     global pplib
 
@@ -148,7 +151,8 @@ Requirements
 * `f₁` and `ϕ` must have the same volume dimensions
 
 """
-function push(f₁::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer}, sett::Settings = Settings())
+function push(f₁::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer},
+              sett::Settings = Settings())::Array{Float32}
 
     global pplib
 
@@ -198,7 +202,8 @@ Requirements
 * `∇f` and `ϕ` must have the same volume dimensions
 
 """
-function push_grad(∇f::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer}, sett::Settings = Settings())
+function push_grad(∇f::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer},
+                   sett::Settings = Settings())::Array{Float32}
 
     global pplib
 
@@ -241,7 +246,8 @@ end
 This function is still work in progress.
 
 """
-function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer}, sett::Settings = Settings())
+function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer},
+                     sett::Settings = Settings())::Array{Float32}
 
     A = adjust_affine(Aff)
 
@@ -277,7 +283,8 @@ function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3
 end
 
 
-function affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer}, sett::Settings = Settings())
+function affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer},
+                     sett::Settings = Settings())::Array{Float32}
 
     global pplib
 
@@ -319,7 +326,7 @@ end
 Adjust affine transform matrix from 1-offset to 0-offset.
 
 """
-function adjust_affine(Aff::Array{Float32,2})
+function adjust_affine(Aff::Array{Float32,2})::Array{Float32,2}
     @assert((size(Aff,1)==3 || size(Aff,1)==4) && size(Aff,2)==4)
     A = Float32.(Aff[1:3,:])        # Assume A[4,:]==[0 0 0 1]
     A[:,4] .= sum(A,dims=2) .- 1.0  # Adjust for 0-offset (C code)

@@ -1,7 +1,11 @@
 using CUDA
 #using Libdl # Later
 
-function setkernel(kernel, bnd)
+const KernelType = NamedTuple{(:stride, :d, :nchan, :offset, :length, :values, :indices, :patch_indices),
+                              Tuple{NTuple{3, Int64}, NTuple{3, Int64}, Int64, Matrix{Int32}, Matrix{Int32},
+                              Vector{Float32}, Vector{Int32}, Vector{Int32}}}
+
+function setkernel(kernel::KernelType, bnd)
 
 #=
     #define MAX_ELEM 256
@@ -63,11 +67,9 @@ function vel2mom(v::AbstractArray{Float32,4},
 end
 
 function vel2mom!(u::Array{Float32,4},
-                 v::Array{Float32,4},
-                 kernel::NamedTuple{(:stride, :d, :nchan, :offset, :length, :values, :indices, :patch_indices),
-                     Tuple{NTuple{3, Int64}, NTuple{3, Int64}, Int64, Matrix{Int32}, Matrix{Int32},
-                     Vector{Float32}, Vector{Int32}, Vector{Int32}}},
-                 bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
+                  v::Array{Float32,4},
+                  kernel::KernelType,
+                  bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
 
     global oplib
 
@@ -90,9 +92,7 @@ end
 
 function vel2mom!(u::CuArray{Float32,4},
                   v::CuArray{Float32,4},
-                  kernel::NamedTuple{(:stride, :d, :nchan, :offset, :length, :values, :indices, :patch_indices),
-                          Tuple{NTuple{3, Int64}, NTuple{3, Int64}, Int64, Matrix{Int32}, Matrix{Int32},
-                          Vector{Float32}, Vector{Int32}, Vector{Int32}}},
+                  kernel::KernelType,
                   bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
 
     function run_kernel(fun, threads, r, u, v)
