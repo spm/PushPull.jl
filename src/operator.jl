@@ -118,36 +118,71 @@ Take the regularisation operator `L`, and (if necessary) reduce its
 dimensions so that it fits with a set of image dimensions `d`.
 
 """
-function reduce2fit!(L::Array{<:Real,4}, d::NTuple{3,Integer})
+function reduce2fit!(L::Union{Array{<:Real,4},CuArray{<:Real,4}}, d::NTuple{3,Integer},
+                     bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
     dp = size(L)
     c  = Int32.((dp[1:3].+1)./2)
-    r0  = max.(c.-d,0)
+    r0 = max.(c.-d,0)
 
-    r  = [1:r0[1]; (dp[1]+1-r0[1]):dp[1]]
-    if ~isempty(r)
-        L[[c[1]],:,:,:] .+= sum(L[r,:,:,:],dims=1)
-        L[ r    ,:,:,:]  .= 0
-    end
+    for dim=1:3
+        if bnd[1,dim]==0 || d[1]==1
+            r  = [1:r0[1]; (dp[1]+1-r0[1]):dp[1]]
+        else
+            r = []
+        end
+        if ~isempty(r)
+            if bnd[1,dim]==2
+                w                   = ones(dp[1])
+                w[[c[1]-1,c[1]+1]] .= -1
+                w = reshape(w[r],(length(r),1,1))
+                L[[c[1]],:,:,dim] .+= sum(L[r,:,:,dim].*w,dims=1)
+            else
+                L[[c[1]],:,:,dim] .+= sum(L[r,:,:,dim],dims=1)
+            end
+            L[r,:,:,dim]  .= 0
+        end
 
-    r  = [1:r0[2]; (dp[2]+1-r0[2]):dp[2]]
-    if ~isempty(r)
-        L[:,[c[2]],:,:] .+= sum(L[:,r,:,:],dims=2)
-        L[:, r    ,:,:]  .= 0
-    end
+        if bnd[2,dim]==0 || d[2]==1
+            r  = [1:r0[2]; (dp[2]+1-r0[2]):dp[2]]
+        else
+            r = []
+        end
+        if ~isempty(r)
+            if bnd[2,dim]==2
+                w                   = ones(dp[2])
+                w[[c[2]-1,c[2]+1]] .= -1
+                w = reshape(w[r],(1,length(r),1))
+                L[:,[c[2]],:,dim] .+= sum(L[:,r,:,dim].*w,dims=2)
+            else
+                L[:,[c[2]],:,dim] .+= sum(L[:,r,:,dim],dims=2)
+            end
+            L[:,r,:,dim]  .= 0
+        end
 
-    r  = [1:r0[3]; (dp[3]+1-r0[3]):dp[3]]
-    if ~isempty(r)
-        L[:,:,[c[3]],:] .+= sum(L[:,:,r,:],dims=3)
-        L[:,:, r    ,:]  .= 0
+        if bnd[3,dim]==0 || d[3]==1
+            r  = [1:r0[3]; (dp[3]+1-r0[3]):dp[3]]
+        else
+            r  = []
+        end
+        if ~isempty(r)
+            if bnd[3,dim]==2
+                w                   = ones(dp[3])
+                w[[c[3]-1,c[3]+1]] .= -1
+                w = reshape(w[r],(1,1,length(r)))
+                L[:,:,[c[3]],dim] .+= sum(L[:,:,r,dim].*w,dims=3)
+            else
+                L[:,:,[c[3]],dim] .+= sum(L[:,:,r,dim],dims=3)
+            end
+            L[:,:, r,dim]  .= 0
+        end
     end
-    if any(r0.>0)
-        r1 = (r0[1]+1):(dp[1]-r0[1])
-        r2 = (r0[2]+1):(dp[2]-r0[2])
-        r3 = (r0[3]+1):(dp[3]-r0[3])
-        L  = L[r1,r2,r3,:]
-    end
-    return L
+    msk = sum(L.!=0,dims=4)
+    i1  = sum(msk,dims=(2,3))[:] .!= 0
+    i2  = sum(msk,dims=(1,3))[:] .!= 0
+    i3  = sum(msk,dims=(1,2))[:] .!= 0
+    return L[i1[:],i2[:],i3[:],:]
 end
+
 
 """
     sparsify(L::Array{<:Real,4}, d::NTuple{3,Integer}, nd=3)
@@ -194,7 +229,6 @@ where:
 
 """
 function sparsify(L::Array{<:Real,4}, d::NTuple{3,Integer}, nd=3)
-   #L  = reduce2fit!(L,d)
     dp = (size(L,1),size(L,2),size(L,3))
     @assert(all(rem.(dp,2).==1),"First three dimensions of `L` must be odd")
     @assert(size(L,4)==3 || size(L,4)==6, "Incorrectly sized `L`")
@@ -308,22 +342,26 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
 
     function scratchlen(dl,d)
         # Could re-order the fft to reduce memory requirements
-        d1  = [dl...]
-        d2  = deepcopy(d1)
-        len = 0;
+        d0  = [dl...]
+        d1  = deepcopy(d0)
+        len1 = 0
         for i=1:3
-            d2[i] = 2*d[i]
+            d1[i] = 2*d[i]
+            len1  = max(len1,prod(d1))
             d1[i] = d[i]+1
-            len   = max(len,prod(d2)+prod(d1))
-            d2[i] = d1[i]
         end
-        return len
+        len0 = 0
+        for i=1:3
+            d0[i] = d[i]+1
+            len0  = max(len0,prod(d0))
+        end
+        return len0,len1
     end
 
-    dl   = size(L)
+    dl = size(L)
     # TODO: Determine the actual maximum amount of memory required
     #sl = 2*prod(d.+1)+prod(d.+1)
-    sl = scratchlen(size(L)[1:3],d) 
+    sl  = sum(scratchlen(size(L)[1:3],d))
     if isa(L,CuArray)
         K       = Array{CuArray{Float32,3}}(undef, dl[4])
         scratch = CUDA.zeros(ComplexF32,sl)
@@ -339,7 +377,7 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
             dl0      = [dl...]
             dl0[dim] = length(r[dim])
             L0       = reshape(view(scratch,1:prod(dl0)),dl0...)
-            o        = prod(dl0)
+            o,unused = scratchlen(dl,d)
             dl0[dim] = 2*d[dim]
             L1       = reshape(view(scratch,(o+1):(o+prod(dl0))),dl0...)
             L1      .= 0
@@ -353,7 +391,9 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
             T        = T<:Complex ? T : Complex{T}
            #L1       = isa(L,CuArray) ? CUDA.zeros(T, (dl1...)) : zeros(T, (dl1...))
             L0,L1    = scratch_array(size(L),d,r,dim)
-            indices  = mod.((1:size(L,dim)).-round(Int,(size(L,dim)+1)/2),2*d[dim]).+1
+            bc       = 0
+            c        = round(Int,(size(L,dim)+1)/2)
+            indices  = mod.((1:size(L,dim)).-c, 2*d[dim]).+1
             ind0     = [UnitRange.(1,size(L))...]
             ind1     = deepcopy(ind0)
             for i=1:length(indices)
@@ -381,9 +421,11 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
             K[i]   = padft(view(L, :,:,:,i), d, (r...,))
             K[i] .^= (-1)
             r[i]   = ri
+            if ~all(isfinite.(Array(view(K[i],1:1))))
+                CUDA.@allowscalar K[i][1:1] .= 0.0f0
+            end
         end
     else
-        # TODO: Work out why there are three GPU allocations more than expected
         if isa(L,CuArray)
             F = Array{CuArray{Float32,3}}(undef, dl[4])
         else
@@ -395,6 +437,8 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
         end
 
         # Re-use scratch
+        # Note that dF and t are real, but scratch is complex.
+        # Need to figure out a way of using the same memory as either real or complex.
         d1   = d[1:3].+1
         dF   = reshape(view(scratch, 1:prod(d1)), d1...)
         t    = reshape(view(scratch, (length(dF)+1):(2*length(dF))), size(dF)...)
@@ -445,7 +489,6 @@ end
 
 function kernel(d::NTuple{3,Integer}, vx::Vector{<:Real}=[1,1,1], λ::Vector{<:Real}=[0,1,0,0])
     L = registration_operator(vx,λ)
-    L = reduce2fit!(L,d)
     K = greens(L, d)
 end
 

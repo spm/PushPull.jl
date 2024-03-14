@@ -117,7 +117,7 @@ __device__ void relax1(float *v, const USIZE_t *d, const float *g, const float *
 
 
 __device__ void vel2mom1(float *u, const USIZE_t *d, const float *v,
-                        const int *offset, const int *length, const float *values, const int *indices)
+                         const int *offset, const int *length, const float *values, const int *indices)
 {
     USIZE_t d3 = d[3], j;
 

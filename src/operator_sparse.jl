@@ -65,8 +65,8 @@ end
 function vel2mom!(u::Array{Float32,4},
                  v::Array{Float32,4},
                  kernel::NamedTuple{(:stride, :d, :nchan, :offset, :length, :values, :indices, :patch_indices),
-                 Tuple{NTuple{3, Int64}, NTuple{3, Int64}, Int64, Matrix{Int32}, Matrix{Int32},
-                 Vector{Float32}, Vector{Int32}, Vector{Int32}}},
+                     Tuple{NTuple{3, Int64}, NTuple{3, Int64}, Int64, Matrix{Int32}, Matrix{Int32},
+                     Vector{Float32}, Vector{Int32}, Vector{Int32}}},
                  bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
 
     global oplib
@@ -74,8 +74,9 @@ function vel2mom!(u::Array{Float32,4},
     @assert(all(size(u).==size(v)))
     @assert(all(kernel.d .== size(v)[1:3]))
     @assert(kernel.nchan == size(v,4))
-    d  = Csize_t.([size(v)..., 1])
-    dp = Csize_t.([kernel.stride...])
+    d   = Csize_t.([size(v)..., 1])
+    dp  = Csize_t.([kernel.stride...])
+    bnd = Int32.(bnd[:])
 
     ccall(dlsym(oplib,:vel2mom), Cvoid,
           (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Csize_t}, Ptr{Csize_t},
@@ -83,7 +84,7 @@ function vel2mom!(u::Array{Float32,4},
            Ptr{Cfloat}, Ptr{Cint}, Ptr{Cint}, Ptr{Cint}),
           pointer(u), pointer(v), pointer(d), pointer(dp),
           pointer(kernel.offset), pointer(kernel.length),
-          pointer(kernel.values), pointer(kernel.indices), pointer(kernel.patch_indices), pointer(bnd[:]))
+          pointer(kernel.values), pointer(kernel.indices), pointer(kernel.patch_indices), pointer(bnd))
      return u
 end
 
@@ -95,8 +96,9 @@ function vel2mom!(u::CuArray{Float32,4},
                   bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
 
     function run_kernel(fun, threads, r, u, v)
-        o  = UInt64.(first.(r) .- 1)
-        n  = UInt64.(max.((last.(r) .- first.(r)).+1,0))
+        # Computations using zero-offset
+        o  = UInt64.(first.(r))
+        n  = UInt64.(max.((last.(r) .- first.(r)),0))
         n1 = prod(n)
         if n1>0
             setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"o"), o)
@@ -129,34 +131,34 @@ function vel2mom!(u::CuArray{Float32,4},
 
     d  = kernel.d
     dp = kernel.stride
-    rs = Int.((dp.+1)./2)    # Start of middle block
-    re = Int.(d.-(dp.-1)./2) # End of middle block
+    rs = min.(Int.((dp.+1)./2),d)     # Start of middle block
+    re = max.(rs,Int.(d.-(dp.+1)./2)) # End of middle block
 
-    if any(re.<rs)
+    if any(re.<=rs)
         # No middle block
-        r = UnitRange.(1,d)
+        r = UnitRange.(0,d)
         run_kernel(cuVel2momPad, threads_pad, r, u, v)
     else
-        r  = (UnitRange(1,d[1]), UnitRange(1,d[2]), UnitRange(1,rs[3]-1))
+        r  = (UnitRange(0,d[1]), UnitRange(0,d[2]), UnitRange(0,rs[3]))
         run_kernel(cuVel2momPad, threads_pad, r, u, v)
 
-        r  = (UnitRange(1,d[1]), UnitRange(1,rs[2]-1), UnitRange(rs[3],re[3]))
+        r  = (UnitRange(0,d[1]), UnitRange(0,rs[2]), UnitRange(rs[3],re[3]))
         run_kernel(cuVel2momPad, threads_pad, r, u, v)
 
-        r  = (UnitRange(1,rs[1]-1), UnitRange(rs[2],re[2]), UnitRange(rs[3],re[3]))
+        r  = (UnitRange(0,rs[1]), UnitRange(rs[2],re[2]), UnitRange(rs[3],re[3]))
         run_kernel(cuVel2momPad, threads_pad, r, u, v)
 
         # Middle block
         r  = UnitRange.(rs,re)
         run_kernel(cuVel2mom, threads_nopad, r, u, v)
 
-        r  = (UnitRange(re[1]+1,d[1]), UnitRange(rs[2],re[2]), UnitRange(rs[3],re[3]))
+        r  = (UnitRange(re[1],d[1]), UnitRange(rs[2],re[2]), UnitRange(rs[3],re[3]))
         run_kernel(cuVel2momPad, threads_pad, r, u, v)
 
-        r  = (UnitRange(1,d[1]), UnitRange(re[2]+1,d[2]), UnitRange(rs[3],re[3]))
+        r  = (UnitRange(0,d[1]), UnitRange(re[2],d[2]), UnitRange(rs[3],re[3]))
         run_kernel(cuVel2momPad, threads_pad, r, u, v)
 
-        r  = (UnitRange(1,d[1]), UnitRange(1,d[2]), UnitRange(re[3]+1,d[3]))
+        r  = (UnitRange(0,d[1]), UnitRange(0,d[2]), UnitRange(re[3],d[3]))
         run_kernel(cuVel2momPad, threads_pad, r, u, v)
     end
     return v
