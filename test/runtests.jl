@@ -148,7 +148,7 @@ end
     f1    = randn(Float32,(d...,c))
     f2    = randn(Float32,(d...,c))
     phi   = randn(Float32,(d...,3))
-    phi .+= PushPull.id(d,false)
+    phi .+= PushPull.id(d; gpu=false)
 
     # Comparing numerical vs analytic gradients needs a slightly
     # high tolerance.
@@ -214,7 +214,7 @@ end
     f1    = randn(Float32,(d...,c,bs))
     f2    = randn(Float32,(d...,c,bs))
     phi   = randn(Float32,(d...,3,bs))
-    phi .+= PushPull.id(d,false)
+    phi .+= PushPull.id(d; gpu=false)
 
     # CPU
     sett  = PushPull.Settings((3,3,3),(0,1,2),1)

@@ -51,39 +51,39 @@ end
 Same as dst, except that it operates in-place on X, which must be an array of real floating-point values.
 """
 function dst!(X::Array{<:AbstractFloat},dims=1:ndims(X))
-    X = scale_post!(r2r!(X, RODFT10, dims), dims, 1)
+    X = _scale_post!(r2r!(X, RODFT10, dims), dims, 1)
 end
 
 function dst_scratch(d::NTuple{N, Integer}, dt::DataType) where {N}
-    global scratch
+    global _scratch_dst
     if dt<:CuArray
-        if (length(scratch) == 2*prod(d)) && (eltype(scratch)==Complex{eltype(dt)})
+        if (length(_scratch_dst) == 2*prod(d)) && (eltype(_scratch_dst)==Complex{eltype(dt)})
             # Already defined
             return false
         else
             #print("Allocating ", 2*prod(d)/1024, " elements of ", eltype(dt), ".\n")
-            scratch = CUDA.zeros(Complex{eltype(dt)}, 2*prod(d))
+            _scratch_dst = CUDA.zeros(Complex{eltype(dt)}, 2*prod(d))
             return true
         end
     else
-        scratch = []
+        _scratch_dst = []
         return false
     end
 end
 
 function dst_scratch(d::NTuple{N, Integer}, i::Integer) where {N}
-    global scratch
-    @assert(length(scratch) == 2*prod(d))
+    global _scratch_dst
+    @assert(length(_scratch_dst) == 2*prod(d))
     d1    = [d...]
     d1[i] = 2*d[i]
-    X2    = reshape(scratch, d1...)
-    X1    = reshape(view(scratch,1:prod(d)),d)
+    X2    = reshape(_scratch_dst, d1...)
+    X1    = reshape(view(_scratch_dst,1:prod(d)),d)
     return X2, X1
 end
 
 function dst_scratch(do_clear::Bool=true)
     if do_clear
-        global scratch = []
+        global _scratch_dst = []
     end
     return nothing 
 end
@@ -104,8 +104,8 @@ function dst!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
         X2[r1...] .= .-X
         r1[i] = 2:1:(di+1)
         fft!(X2,i)
-        w     = dst_scale(T, d, i)
-        X .= imag.(view(X2,r1...).*w)
+        w     = _dst_scale(T, d, i)
+        X    .= imag.(view(X2,r1...).*w)
         r1[i] = ri
     end
     dst_scratch(cl)
@@ -118,7 +118,7 @@ end
 Same as idst, but operates in-place on X.
 """
 function idst!(X::Array{<:AbstractFloat},dims=1:ndims(X))
-    X = r2r!(scale_pre!(X, dims, 1), RODFT01, dims)
+    X = r2r!(_scale_pre!(X, dims, 1), RODFT01, dims)
 end
 
 # Slow GPU implementation
@@ -133,10 +133,10 @@ function idst!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
         X2,   = dst_scratch(d,i)
         if true
             ri    = r1[i]
-            w     = im ./ dst_scale(T, d, i)
+            w     = im ./ _dst_scale(T, d, i)
             r2[i] = r2[i].+1
             X2[r2...] .= X.*w
-            w     = reshape(conj.(w[1:(end-1)]), along(length(d), i, d[i]-1))
+            w     = reshape(conj.(w[1:(end-1)]), _along(length(d), i, d[i]-1))
             r2[i] = (d[i]*2):-1:(d[i]+2)
             r1[i] = 1:1:(d[i]-1)
             X2[r2...] .= view(X,r1...).*w
@@ -179,7 +179,7 @@ function dct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
                 r1[i] = r1i
                 r2[i] = r2i
                 fft!(X1, i)
-                w     = dct_scale(T, d, i)
+                w     = _dct_scale(T, d, i)
                 w   .*= 2
                 X   .= real.(X1.*w)
             else
@@ -190,7 +190,7 @@ function dct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
                 X2[r1...] .= X
                 r1[i] = r1i
                 fft!(X2,i)
-                w     = dct_scale(T, d, i)
+                w     = _dct_scale(T, d, i)
                 X .= real.(view(X2,r1...).*w)
             end
         end
@@ -215,7 +215,7 @@ function idct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
             if iseven(d[i])
                 # Even sized
                 ri    = r1[i]
-                w     = dct_scale(T, d, i)
+                w     = _dct_scale(T, d, i)
                 w    .= 1 ./ w
                 w[1:1] ./= 2
                 X1 .= X.*w
@@ -230,10 +230,10 @@ function idct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
             else
                 # Odd sized
                 ri    = r1[i]
-                w     = dct_scale(T, d, i)
+                w     = _dct_scale(T, d, i)
                 w    .= 1 ./ w
                 X2[r2...] .= X.*w
-                w     = reshape(conj.(w[2:end]), along(length(d), i, d[i]-1))
+                w     = reshape(conj.(w[2:end]), _along(length(d), i, d[i]-1))
                 r2[i] = (d[i]*2):-1:(d[i]+2)
                 r1[i] = 2:d[i]
                 X2[r2...] = view(X,r1...).*w
@@ -252,19 +252,19 @@ function idct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
 end
 
 
-function scale_pre!(X::Array{<:AbstractFloat}, dims=1:ndims(X), s1::Real=sqrt(2.))
+function _scale_pre!(X::Array{<:AbstractFloat}, dims=1:ndims(X), s1::Real=sqrt(2.))
     dims = [dims...]
     X  .*= (1 ./ sqrt(prod(2 .* size(X)[dims])))
-    scale_first!(X, s1, dims)
+    _scale_first!(X, s1, dims)
 end
 
-function scale_post!(X::Array{<:AbstractFloat}, dims=1:ndims(X), s1::Real=1/sqrt(2.))
+function _scale_post!(X::Array{<:AbstractFloat}, dims=1:ndims(X), s1::Real=1/sqrt(2.))
     dims = [dims...]
     X .*= (1 ./ sqrt(prod(2 .* size(X)[dims])))
-    scale_first!(X, s1, dims)
+    _scale_first!(X, s1, dims)
 end
 
-function scale_first!(X::Array{<:AbstractFloat}, s1::Real, dims=1:ndims(X))
+function _scale_first!(X::Array{<:AbstractFloat}, s1::Real, dims=1:ndims(X))
     dims = [dims...]
     if s1==1
         return X
@@ -281,24 +281,24 @@ function scale_first!(X::Array{<:AbstractFloat}, s1::Real, dims=1:ndims(X))
 end
 
 
-"""
-Testing DCT/IDCT
-"""
-function dct_test!(X::Array{<:AbstractFloat},dims=1:ndims(X))
-    return scale_post!(r2r!(X, REDFT10, dims), dims)
-end
-function idct_test!(X::Array{<:AbstractFloat},dims=1:ndims(X))
-    return r2r!(scale_pre!(X, dims), REDFT01, dims)
-end
-function dct_test(X::Array{<:AbstractFloat}, dims=1:ndims(X))
-    return dct_test!(deepcopy(X),dims)
-end
-function idct_test(X::Array{<:AbstractFloat}, dims=1:ndims(X))
-    return idct_test!(deepcopy(X),dims)
-end
+#"""
+#Testing DCT/IDCT
+# """
+#function dct_test!(X::Array{<:AbstractFloat},dims=1:ndims(X))
+#    return _scale_post!(r2r!(X, REDFT10, dims), dims)
+#end
+#function idct_test!(X::Array{<:AbstractFloat},dims=1:ndims(X))
+#    return r2r!(_scale_pre!(X, dims), REDFT01, dims)
+#end
+#function dct_test(X::Array{<:AbstractFloat}, dims=1:ndims(X))
+#    return dct_test!(deepcopy(X),dims)
+#end
+#function idct_test(X::Array{<:AbstractFloat}, dims=1:ndims(X))
+#    return idct_test!(deepcopy(X),dims)
+#end
 
 
-function dct_scale(T, d, i)
+function _dct_scale(T, d, i)
     d1     = ones(Int64,length(d))
     d1[i]  = d[i]
     w      = reshape(CuArray{Complex{T}}(0:(d[i]-1)) .*= -(im*pi/(2*d[i])), d1...)
@@ -307,7 +307,7 @@ function dct_scale(T, d, i)
     return w
 end
 
-function dst_scale(T, d, i)
+function _dst_scale(T, d, i)
     d1    = ones(Int64,length(d))
     d1[i] = d[i]
     w     = reshape(CuArray{Complex{T}}(1:(d[i])) .*= -(im*pi/(2*d[i])), d1...)
@@ -315,7 +315,7 @@ function dst_scale(T, d, i)
     return w
 end
 
-function along(nd, i, n)
+function _along(nd, i, n)
     d1    = ones(typeof(n),nd)
     d1[i] = n
     return (d1...,)

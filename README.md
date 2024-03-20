@@ -9,6 +9,8 @@ If you are brave enouth to try using it, then the following may work (in Julia) 
     Pkg.develop(url="https://github.com/spm/PushPull.jl")
     using PushPull
 
-Note that the automated githib actions fail because there seems to be a problem in downloading the CUDA driver, which leads on to several other problems.
+
+Note that the automated githib actions fail because CUDA drivers are missing, which leads on to several other problems.
 
 [![Build Status](https://github.com/spm/PushPull.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/spm/PushPull.jl/actions/workflows/CI.yml?query=branch%3Amain)
+

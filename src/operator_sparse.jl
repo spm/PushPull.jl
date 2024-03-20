@@ -6,7 +6,6 @@ const KernelType = NamedTuple{(:stride, :d, :nchan, :offset, :length, :values, :
                               Vector{Float32}, Vector{Int32}, Vector{Int32}}}
 
 function setkernel(kernel::KernelType, bnd)
-
 #=
     #define MAX_ELEM 256
     #define MAXN 8
@@ -58,7 +57,7 @@ end
 
 
 function vel2mom(v::AbstractArray{Float32,4},
-                 kernel,
+                 kernel::KernelType,
                  bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
 
     u  = zero(v)
@@ -81,12 +80,12 @@ function vel2mom!(u::Array{Float32,4},
     bnd = Int32.(bnd[:])
 
     ccall(dlsym(oplib,:vel2mom), Cvoid,
-          (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Csize_t}, Ptr{Csize_t},
+          (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Csize_t},
            Ptr{Cint}, Ptr{Cint},
-           Ptr{Cfloat}, Ptr{Cint}, Ptr{Cint}, Ptr{Cint}),
-          pointer(u), pointer(v), pointer(d), pointer(dp),
+           Ptr{Cfloat}, Ptr{Cint}, Ptr{Cint}, Ptr{Csize_t}, Ptr{Cint}),
+          pointer(u), pointer(v), pointer(d),
           pointer(kernel.offset), pointer(kernel.length),
-          pointer(kernel.values), pointer(kernel.indices), pointer(kernel.patch_indices), pointer(bnd))
+          pointer(kernel.values), pointer(kernel.indices), pointer(kernel.patch_indices), pointer(dp), pointer(bnd))
      return u
 end
 
@@ -165,12 +164,26 @@ function vel2mom!(u::CuArray{Float32,4},
 end
 
 
-function relax!(g::CuArray{Float32,4},
-                h::CuArray{Float32,4},
-                kernel,
-                bnd::Array{<:Integer},
-                nit::Integer,
-                v::CuArray{Float32,4})
+function relax!(g::Array{Float32,4}, h::Array{Float32,4}, kernel::KernelType,
+                bnd::Array{<:Integer}, nit::Integer, v::Array{Float32,4}) 
+    global oplib
+    (d, dp) = checkdims(g,h,v,kernel,bnd)
+    bnd = Int32.(bnd[:])
+    for it=1:nit
+        ccall(dlsym(oplib,:relax), Cvoid,
+              (Ref{Cfloat}, Ptr{Csize_t}, Ptr{Cfloat}, Ptr{Cfloat},
+               Ptr{Cint}, Ptr{Cint}, Ptr{Cfloat},
+               Ptr{Cint}, Ptr{Cint}, Ptr{Csize_t}, Ptr{Cint}),
+              pointer(v), pointer(d), pointer(g), pointer(h), 
+              pointer(kernel.offset), pointer(kernel.length), pointer(kernel.values),
+              pointer(kernel.indices), pointer(kernel.patch_indices), pointer(dp), pointer(bnd))
+    end
+    return v
+end
+
+
+function relax!(g::CuArray{Float32,4}, h::CuArray{Float32,4}, kernel::KernelType,
+                bnd::Array{<:Integer}, nit::Integer, v::CuArray{Float32,4})
 
     global opmod
     global cuRelax

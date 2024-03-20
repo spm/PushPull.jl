@@ -22,6 +22,7 @@ function pull(f₀::Array{Float32}, ϕ::Array{Float32},
     @assert(ndims(ϕ)  >= 4 && ndims(ϕ)  <= 5, "`ϕ` must have 4 or 5 dimensions")
     @assert(size(ϕ,4) == 3,                   "`ϕ` must have three channels")
     @assert(size(ϕ,5) == size(f₀,5),          "`ϕ` & `f₀` must have the same batch size")
+    @assert(length(sett.bnd)==size(f₀,4) || length(sett.bnd)==1)
 
     Nc  = size(f₀,4)          # Number of channels
     Nb  = size(f₀,5)          # Batchsize
@@ -31,14 +32,13 @@ function pull(f₀::Array{Float32}, ϕ::Array{Float32},
     n₁  = prod(d₁)            # Number of voxels in output volume
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
-    bnd = Cint.([sett.bnd...])
-    ext = sett.ext
     d₀  = Csize_t.([size(f₀)[1:3]...])
     n₁  = Csize_t.(n₁)
 
     f₁  = zeros(Float32, (d₁..., dv...))
 
     for nb=1:Nb, nc=1:Nc
+        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
         ccall(dlsym(pplib,:pull), Cvoid,
               (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
                Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
@@ -71,6 +71,7 @@ function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32},
     @assert(ndims(ϕ)  >= 4 && ndims(ϕ)  <= 5, "`ϕ` must have 4 or 5 dimensions")
     @assert(size(ϕ,4) == 3,                   "`ϕ` must have three channels")
     @assert(size(ϕ,5) == size(f₀,5),          "`ϕ` & `f₀` must have the same batch size")
+    @assert(length(sett.bnd)==size(f₀,4) || length(sett.bnd)==1)
 
     Nc  = size(f₀,4)          # Number of channels
     Nb  = size(f₀,5)          # Batchsize
@@ -80,7 +81,6 @@ function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32},
     n₁  = prod(d₁)            # Number of voxels in output volume
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
-    bnd = Cint.([sett.bnd...])
     ext = sett.ext
     d₀  = Csize_t.([size(f₀)[1:3]...])
     n₁  = Csize_t.(n₁)
@@ -90,7 +90,7 @@ function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32},
     for nb=1:Nb, nc=1:Nc
         # void pull_grad(float *∇f, const float *ϕ, const float *f₀,
         #                const USIZE_t *d₀, const USIZE_t n₁, const int *bnd, const USIZE_t *dp, const int ext)
-
+        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
         ccall(dlsym(pplib,:pullg), Cvoid,
               (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
                Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
@@ -110,6 +110,7 @@ function pull_hess(f₀::Array{Float32}, ϕ::Array{Float32},
     @assert(ndims(ϕ)  >= 4 && ndims(ϕ)  <= 5, "`ϕ` must have 4 or 5 dimensions")
     @assert(size(ϕ,4) == 3,                   "`ϕ` must have three channels")
     @assert(size(ϕ,5) == size(f₀,5),          "`ϕ` & `f₀` must have the same batch size")
+    @assert(length(sett.bnd)==size(f₀,4) || length(sett.bnd)==1)
 
     Nc  = size(f₀,4)          # Number of channels
     Nb  = size(f₀,5)          # Batchsize
@@ -119,7 +120,6 @@ function pull_hess(f₀::Array{Float32}, ϕ::Array{Float32},
     n₁  = prod(d₁)            # Number of voxels in output volume
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
-    bnd = Cint.([sett.bnd...])
     ext = sett.ext
     d₀  = Csize_t.([size(f₀)[1:3]...])
     n₁  = Csize_t.(n₁)
@@ -127,6 +127,7 @@ function pull_hess(f₀::Array{Float32}, ϕ::Array{Float32},
     h₁  = zeros(Float32, (d₁..., 3,3, dv...))
 
     for nb=1:Nb, nc=1:Nc
+        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
         ccall(dlsym(pplib,:pullh), Cvoid,
               (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
               Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
@@ -161,6 +162,7 @@ function push(f₁::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer},
     @assert(size(ϕ,4) == 3,                     "`ϕ` must have three channels")
     @assert(size(ϕ,5) == size(f₁,5),            "`ϕ` & `f₀` must have the same batch size")
     @assert(all(size(f₁)[1:3] == size(ϕ)[1:3]), "`f₁` and `ϕ` must have the same volume dimensions")
+    @assert(length(sett.bnd)==size(f₁,4) || length(sett.bnd)==1)
 
     Nc  = size(f₁,4)          # Number of channels
     Nb  = size(f₁,5)          # Batchsize
@@ -170,7 +172,6 @@ function push(f₁::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer},
     n₁  = prod(d₁)            # Number of voxels in input volume
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
-    bnd = Cint.([sett.bnd...])
     ext = sett.ext
     d₀  = Csize_t.([d₀...])
     n₁  = Csize_t.(n₁)
@@ -178,6 +179,7 @@ function push(f₁::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer},
     f₀  = zeros(Float32, (d₀..., dv...))
 
     for nb=1:Nb, nc=1:Nc
+        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
         ccall(dlsym(pplib,:push), Cvoid,
               (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
                Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
@@ -213,6 +215,7 @@ function push_grad(∇f::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Inte
     @assert(size(∇f,4) == 3,                    "`∇f` must have three components")
     @assert(size(ϕ, 5) == size(∇f,6),           "`ϕ` & `∇f` must have the same batch size")
     @assert(all(size(∇f)[1:3] == size(ϕ)[1:3]), "`∇f` and `ϕ` must have the same volume dimensions")
+    @assert(length(sett.bnd)==size(∇f,5) || length(sett.bnd)==1)
 
     Nc  = size(∇f,5)          # Number of channels
     Nb  = size(∇f,6)          # Batchsize
@@ -222,7 +225,6 @@ function push_grad(∇f::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Inte
     n₁  = prod(d₁)            # Number of voxels in input volume
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
-    bnd = Cint.([sett.bnd...])
     ext = sett.ext
     d₀  = Csize_t.([d₀...])
     n₁  = Csize_t.(n₁)
@@ -230,6 +232,7 @@ function push_grad(∇f::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Inte
     g₀  = zeros(Float32, (d₀..., dv...))
 
     for nb=1:Nb, nc=1:Nc
+        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
         ccall(dlsym(pplib,:pushg), Cvoid,
               (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
               Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
@@ -252,6 +255,8 @@ function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3
     A = adjust_affine(Aff)
 
     @assert(ndims(f₀) >= 3 && ndims(f₀) <= 5, "`f₀` must have between 3 & 5 dimensions")
+    @assert(length(sett.bnd)==size(f₀,4) || length(sett.bnd)==1)
+
     Nc  = size(f₀,4)          # Number of channels
     Nb  = size(f₀,5)          # Batchsize
     dv  = size(f₀)[4:end]
@@ -262,12 +267,12 @@ function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3
     n₁  = prod(d₁)            # Number of voxels in output volume
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
-    bnd = Cint.([sett.bnd...])
     ext = sett.ext
 
     f₁  = zeros(Float32, (d₁..., dv...))
 
     for nb=1:Nb, nc=1:Nc
+        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
         ccall(dlsym(pplib,:pull_affine), Cvoid,
               (Ref{Cfloat},  Ptr{Cfloat},
                Ptr{Csize_t}, Csize_t,
@@ -291,6 +296,7 @@ function affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3
     A = adjust_affine(Aff)
 
     @assert(ndims(f₁) >= 3 && ndims(f₁) <= 5,   "`f₁` must have between 3 & 5 dimensions")
+    @assert(length(sett.bnd)==size(f₁,4) || length(sett.bnd)==1)
     Nc  = size(f₁,4)          # Number of channels
     Nb  = size(f₁,5)          # Batchsize
     dv  = size(f₁)[4:end]
@@ -301,12 +307,12 @@ function affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3
     n₀  = prod(d₀)            # Output volume dimensions
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
-    bnd = Cint.([sett.bnd...])
     ext = sett.ext
 
     f₀  = zeros(Float32, (d₀..., dv...))
 
     for nb=1:Nb, nc=1:Nc
+        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
         ccall(dlsym(pplib,:push_affine), Cvoid,
               (Ref{Cfloat}, Ptr{Cfloat},
                Ptr{Csize_t}, Csize_t,
