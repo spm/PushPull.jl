@@ -61,12 +61,12 @@ void blip(float *u, const USIZE_t *d, const float *g,
           const float *s)
 {
     USIZE_t i0, i1, j0, j1, k0, k1;
-    i0 = MIN(3,  d[0]);
-    j0 = MIN(3,  d[1]);
-    k0 = MIN(3,  d[2]);
-    i1 = MAX(i0, d[0]-3);
-    j1 = MAX(j0, d[1]-3);
-    k1 = MAX(k0, d[2]-3);
+    i0 = MIN(2,  d[0]);
+    j0 = MIN(2,  d[1]);
+    k0 = MIN(2,  d[2]);
+    i1 = MAX(i0, d[0]-2);
+    j1 = MAX(j0, d[1]-2);
+    k1 = MAX(k0, d[2]-2);
 
     /* Note that results are not identical to those from the CUDA
      * implementation because of the ordering of the Gauss–Seidel

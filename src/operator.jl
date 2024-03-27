@@ -239,7 +239,7 @@ function sparsify(L::Array{<:Real,4}, d::NTuple{3,Integer}, nd=3)
         to  = 1
         for j=1:size(nnz,2), i=1:size(nnz,1)
             if isa(B,Array{<:AbstractFloat})
-                B[to]  = sum(A[1:nnz[i,j],i,j])
+                B[to]  = sum(A[2:nnz[i,j],i,j])
             end
             B[(to+1):(to+nnz[i,j])] = A[1:nnz[i,j],i,j];
             o[i,j] = to;

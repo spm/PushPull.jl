@@ -21,7 +21,7 @@ end
 function gpu_cpu_L(d::NTuple{3,Int64}, reg::Vector{<:AbstractFloat})
     vx  = [1.2, 0.7, 1.5]
     bnd = [2 1 1; 1 2 1; 1 1 2]
-    bnd = [0 0 0; 0 0 0; 0 0 0];
+    bnd = [0 0 0; 0 0 0; 0 0 0]
     v   = randn(Float32,(d...,3))
     L   = registration_operator(vx, reg)
     Lsp = sparsify(L, d[1:3])
@@ -30,6 +30,23 @@ function gpu_cpu_L(d::NTuple{3,Int64}, reg::Vector{<:AbstractFloat})
     v   = CuArray(v)
     ug  = vel2mom(v, Lsp, bnd)
     return sum((uc - Array(ug)).^2)/sum(uc.^2)
+end
+
+function ad_consistency(d::NTuple{3,Int64}, reg::Vector{<:AbstractFloat}, cu::Bool)
+    bnd = [2 1 1; 1 2 1; 1 1 2] # Sliding boundary
+    vx  = [1.2, 0.7, 1.5]
+    u0  = randn(Float32,(d...,3))
+    L   = registration_operator(vx, reg)
+    #L   = PushPull.reduce2fit!(L, d[1:3],bnd)
+    Lsp = sparsify(L, d[1:3])
+    if cu
+        L  = CuArray(L)
+        u0 = CuArray(u0)
+    end
+    K  = greens(L, d)
+    v  = mom2vel(u0, K)
+    u1 = vel2mom(v, Lsp, bnd)
+    return sum((u1[:].-u0[:]).^2)./sum(u0[:].^2)
 end
 
 function operator_consistency(d::NTuple{3,Int64}, reg::Vector{<:AbstractFloat}, cu::Bool)
@@ -45,9 +62,9 @@ function operator_consistency(d::NTuple{3,Int64}, reg::Vector{<:AbstractFloat}, 
         u0 = CuArray(u0)
     end
 
-    K  = greens(L, d);
-    v  = mom2vel(u0, K);
-    u1 = vel2mom(v, Lsp, bnd);
+    K  = greens(L, d)
+    v  = mom2vel(u0, K)
+    u1 = vel2mom(v, Lsp, bnd)
 
     return sum((u1[:].-u0[:]).^2)./sum(u0[:].^2)
 end
@@ -232,6 +249,9 @@ end
     @test test_grad(θ -> sum((push(f1, θ,d,sett) .- f2).^2),phi) < tol
     @test test_grad(θ -> sum((push(θ,phi,d,sett) .- f2).^2),f1)  < tol
 
+    # Tests of the push/pull adjoint
+    tol = 1e-5
+    @test abs(sum(f1.*pull(f2,phi,sett)) - sum(push(f1,phi,d,sett).*f2)) < tol
 end
 nothing
 

@@ -1,12 +1,10 @@
-using PushPull
-pp         = PushPull
 VolType{N} = Union{CuArray{Float32,N}, Array{Float32,N}}
 
 dim(v) = size(v)[1:3]
 
 struct HessType<:Any
     H::VolType
-    L::pp.KernelType
+    L::KernelType
     bnd::Array{Int32,2}
 end
 
@@ -24,8 +22,13 @@ function restrict(f1::VolType, d0::NTuple{3,Int}=Int64.(ceil.(dim(f1)./2)), deg:
     zm  = d0./d1;
     os  = (1 .- zm)./2
     Mat = Float32.([zm[1] 0. 0. os[1]; 0. zm[2] 0. os[2];  0. 0. zm[3] os[3]; 0. 0. 0. 1.])
-    f0  = pp.affine_push(f1, Mat, d0, pp.Settings((deg,deg,deg),(1,1,1),true))
-    f0 .*= prod(d0./d1)
+    f0  = affine_push(f1, Mat, d0, Settings(deg,(1,1,1),true))
+
+    c1  = typeof(f1)(undef,(size(f1)[1:3]...,1))
+    c1 .= Float32(prod(d0)/prod(d1))
+    c0  = affine_push(c1, Mat, d0, Settings(deg,(1,1,1),true))
+    f0 ./= c0
+
     return f0
 end
 
@@ -41,7 +44,8 @@ function prolong(f0::VolType, d1::NTuple{3,Int}=2dim(f0), deg::Integer=1)
     zm  = d0./d1;
     os  = (1 .- zm)./2
     Mat = Float32.([zm[1] 0. 0. os[1]; 0. zm[2] 0. os[2];  0. 0. zm[3] os[3]; 0. 0. 0. 1.])
-    f1  = pp.affine_pull(f0, Mat, d1, pp.Settings((deg,deg,deg),(1,1,1),true))
+    bnd = [2 1 1; 1 2 1; 1 1 2] # Sliding boundaries
+    f1  = affine_pull(f0, Mat, d1, Settings(deg,bnd,true))
     return f1
 end
 
@@ -54,8 +58,8 @@ Multiplying `v` by the Hessian (`H`).
 """
 
 function Hv!(v::VolType, H::VolType, u::VolType=zero(v))::VolType
-    @assert(all(dim(H)  .== dim(v))
-    @assert(all(size(v) .== size(u))
+    @assert(all(dim(H)  .== dim(v)))
+    @assert(all(size(v) .== size(u)))
     @assert(size(H,4) == 6)
     @assert(size(v,4) == 3)
     h11  = view(H,:,:,:,1)
@@ -72,7 +76,7 @@ function Hv!(v::VolType, H::VolType, u::VolType=zero(v))::VolType
     u3   = view(u,:,:,:,3)
     u1 .+= h11.*v1 .+ h12.*v2 .+ h13.*v3
     u2 .+= h12.*v1 .+ h22.*v2 .+ h23.*v3
-    u2 .+= h13.*v1 .+ h23.*v2 .+ h33.*v3
+    u3 .+= h13.*v1 .+ h23.*v2 .+ h33.*v3
     return u
 end
 
@@ -100,12 +104,12 @@ Gauss-Siedel relaxation to update `u` from gradients `g`, and a Hessian
 See `https://en.wikipedia.org/wiki/Multigrid_method` for more information.
 
 """
-function relax!(g::VolType, H::Dict, nit::Int=2, v::VolType=zero(g))::VolType
+function relax!(g::VolType, HL::Dict, nit::Int=2, v::VolType=zero(g))::VolType
     d   = dim(g)
-    h   = H[d].H
-    L   = H[d].L
-    bnd = H[d].bnd
-    relax!(g, h, L, bnd, nit, v)
+    H   = HL[d].H
+    L   = HL[d].L
+    bnd = HL[d].bnd
+    relax!(g, H, L, bnd, nit, v)
     return v
 end
 
@@ -127,9 +131,9 @@ function hessian_pyramid(h::VolType,
     vx    = Float32.(vx)
     reg   = Float32.(reg)
     bnd   = [2 1 1; 1 2 1; 1 1 2]
-    regop(d,vx,reg) = sparsify(pp.reduce2fit!(pp.registration_operator(vx, reg), d, bnd), d)
+    regop(d,vx,reg) = sparsify(reduce2fit!(registration_operator(vx, reg), d, bnd), d)
     d0    = d = dim(h)
-    HL    = PyramidType
+    HL    = PyramidType()
     HL[d] = HessType(h,regop(d,vx,reg),bnd)
     while any(d .> 1)
         h     = restrict(h)
@@ -137,7 +141,7 @@ function hessian_pyramid(h::VolType,
         d     = dim(h)
         HL[d] = HessType(h , regop(d,Float32.(vx.*d0./d),reg), bnd)
     end
-    return H
+    return HL
 end
 
 
@@ -155,13 +159,13 @@ function vcycle!(v::VolType, g::VolType, HL::PyramidType; nit_pre::Integer=4, ni
         relax!(g, HL, nit_pre, v)
     else
         relax!(g, HL, nit_pre, v)
-        g↓ = restrict(g .- HLv(v, HL))
-        v↓ = zero(g↓)
-        vcycle!(v↓,g↓,HL; nit_pre=nit_pre, nit_post=nit_post)
-        v .+= prolong(v↓, dim(v))
+        g1 = restrict(g .- HLv(v, HL))
+        v1 = zero(g1)
+        vcycle!(v1,g1,HL; nit_pre=nit_pre, nit_post=nit_post)
+        v .+= prolong(v1, dim(v))
         relax!(g, HL, nit_post, v)
     end
-    return u
+    return v
 end
 
 

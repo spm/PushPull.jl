@@ -49,17 +49,17 @@ void vel2mom(float *u, const float* v, const USIZE_t *d,
     SSIZE_t rs[3], re[3], i;
     for(i=0; i<3; i++)
     {
-        rs[i] = MIN((dp[i]+1)/2,d[i]);
-        re[i] = MAX(rs[i],(signed)d[i]-(dp[i]+1)/2);
+        rs[i] = MIN((dp[i]-1)/2,d[i]);
+        re[i] = MAX(rs[i],(signed)d[i]-(dp[i]-1)/2);
     }
  /* vel2mom_edge(   0 , d[0],    0 , d[1],    0 ,  d[2], u, d, v, offset, length, values, patch_indices, dp, bnd); */
     vel2mom_edge(   0 , d[0],    0 , d[1],    0 , rs[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
     vel2mom_edge(   0 , d[0],    0 ,rs[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
     vel2mom_edge(   0 ,rs[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
-    vel2mom_midd(rs[0],re[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, indices);
     vel2mom_edge(re[0], d[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
     vel2mom_edge(   0 , d[0], re[1], d[1], rs[2], re[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
     vel2mom_edge(   0 , d[0],    0 , d[1], re[2],  d[2], u, d, v, offset, length, values, patch_indices, dp, bnd);
+    vel2mom_midd(rs[0],re[0], rs[1],re[1], rs[2], re[2], u, d, v, offset, length, values, indices);
 }
 
 
@@ -118,22 +118,19 @@ void relax(float *v, const USIZE_t *d, const float *g, const float *h,
            const USIZE_t *dp, const int *bnd)
 {
     USIZE_t i0, i1, j0, j1, k0, k1;
-    i0 = MIN(3,  d[0]);
-    j0 = MIN(3,  d[1]);
-    k0 = MIN(3,  d[2]);
-    i1 = MAX(i0, d[0]-(dp[0]+1)/2);
-    j1 = MAX(j0, d[1]-(dp[1]+1)/2);
-    k1 = MAX(k0, d[2]-(dp[2]+1)/2);
+    i0 = MIN((dp[0]-1)/2,  d[0]);
+    j0 = MIN((dp[1]-1)/2,  d[1]);
+    k0 = MIN((dp[2]-1)/2,  d[2]);
+    i1 = MAX(i0, d[0]-(dp[0]-1)/2);
+    j1 = MAX(j0, d[1]-(dp[1]-1)/2);
+    k1 = MAX(k0, d[2]-(dp[2]-1)/2);
 
-    /* Note that results are not identical to those from the CUDA
-     * implementation because of the ordering of the Gauss–Seidel
-     * updates. Maybe (just maybe) fix this later. */
     relax_edge( 0,d[0],  0,d[1],  0,  k0, v, d, g, h, offset, length, values, patch_indices, dp, bnd);
     relax_edge( 0,d[0],  0,  j0, k0,  k1, v, d, g, h, offset, length, values, patch_indices, dp, bnd);
     relax_edge( 0,  i0, j0,  j1, k0,  k1, v, d, g, h, offset, length, values, patch_indices, dp, bnd);
-    relax_midd(i0,  i1, j0,  j1, k0,  k1, v, d, g, h, offset, length, values, indices, dp);
     relax_edge(i1,d[0], j0,  j1, k0,  k1, v, d, g, h, offset, length, values, patch_indices, dp, bnd);
     relax_edge( 0,d[0], j1,d[1], k0,  k1, v, d, g, h, offset, length, values, patch_indices, dp, bnd);
     relax_edge( 0,d[0],  0,d[1], k1,d[2], v, d, g, h, offset, length, values, patch_indices, dp, bnd);
+    relax_midd(i0,  i1, j0,  j1, k0,  k1, v, d, g, h, offset, length, values, indices, dp);
 }
 

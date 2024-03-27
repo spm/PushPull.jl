@@ -103,7 +103,6 @@ function vel2mom!(u::CuArray{Float32,4},
             setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"o"), o)
             setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"n"), n)
 
-            n1      = prod(n)
             threads = min(threads,n1)
             blocks  = Int32(ceil(n1./threads))
             cudacall(fun, (CuPtr{Cfloat},CuPtr{Cfloat}),
@@ -169,6 +168,8 @@ function relax!(g::Array{Float32,4}, h::Array{Float32,4}, kernel::KernelType,
     global oplib
     (d, dp) = checkdims(g,h,v,kernel,bnd)
     bnd = Int32.(bnd[:])
+    d   = [d...,]
+    dp  = [dp...,]
     for it=1:nit
         ccall(dlsym(oplib,:relax), Cvoid,
               (Ref{Cfloat}, Ptr{Csize_t}, Ptr{Cfloat}, Ptr{Cfloat},
@@ -185,6 +186,38 @@ end
 function relax!(g::CuArray{Float32,4}, h::CuArray{Float32,4}, kernel::KernelType,
                 bnd::Array{<:Integer}, nit::Integer, v::CuArray{Float32,4})
 
+    function relax_block!(v::CuArray{Float32,4},
+                          g::CuArray{Float32,4},
+                          h::CuArray{Float32,4},
+                          fun::CuFunction, r,
+                          threads0=0)
+        global opmod
+
+        if threads0==0
+            config   = launch_configuration(fun)
+            threads0 = config.threads
+        end
+
+        #print(r[1][1],",",r[1][2],",",r[1][3]," -> ", r[3][1],",",r[3][2],",",r[3][3],"\n")
+        for k=r[1][3]:(min(r[3][3],r[1][3]+r[2][3])-1),
+            j=r[1][2]:(min(r[3][2],r[1][2]+r[2][2])-1),
+            i=r[1][1]:(min(r[3][1],r[1][1]+r[2][1])-1)
+            o  = (i,j,k)
+            n  = Int64.(ceil.((Signed.(r[3]).-Signed.((i,j,k)))./Signed.(r[2])))
+            if all(n.>0)
+                n1      = prod(n)
+                threads = min(threads0,n1)
+                blocks  = Int32(ceil(n1./threads))
+                setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"o"), UInt64.(o))
+                setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"n"), UInt64.(n))
+                cudacall(fun, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
+                         pointer(v), pointer(g), pointer(h);
+                         threads=threads, blocks=blocks)
+            end
+        end
+        return v
+    end
+
     global opmod
     global cuRelax
     global cuRelaxPad
@@ -196,57 +229,34 @@ function relax!(g::CuArray{Float32,4}, h::CuArray{Float32,4}, kernel::KernelType
     setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"dp"), dp)
     setkernel(kernel,bnd)
 
-    regions  = range.(d[1:3],dp[1:3])
+    threads_pad   = launch_configuration(cuRelaxPad).threads
+    threads_nopad = launch_configuration(cuRelax).threads
 
-    config        = launch_configuration(cuRelaxPad)
-    threads_pad   = config.threads
-    config        = launch_configuration(cuRelax)
-    threads_nopad = config.threads
+    rs = min.(Int.((dp.-1)./2), Int64.(d[1:3]))     # Start of middle block
+    re = max.(rs, Int.(Int64.(d[1:3]).-(dp.-1)./2)) # End of middle block
+
+    block_range(is,ie,js,je,ks,ke) = (Signed.((is,js,ks)),Signed.(dp),Signed.((ie,je,ke)))
+    #print("[",rs[1],",",rs[2],",",rs[3]," -> ",re[1],",",re[2],",",re[3],"]\n")
 
     for it=1:nit
-        for k=1:length(regions[3])
-            rk = regions[3][k]
-            for j=1:length(regions[2])
-                rj = regions[2][j]
-                for i=1:length(regions[1])
-                    ri = regions[1][i]
-                    r  = (start=(ri[1],rj[1],rk[1]), step=dp, stop=(ri[2],rj[2],rk[2]))
-                    fun,threads = (k==2 && j==2 && i==2) ? (cuRelax,threads_nopad) : (cuRelaxPad,threads_pad)
-                    relax_block!(v, g, h, fun, r, threads)
-                end
-            end
+        
+        if any(re.<rs)
+            # No middle block
+            relax_block!(v,g,h,cuRelaxPad,block_range(    0, d[1],    0, d[2],    0, d[3]),threads_pad)
+        else
+            # Edge blocks
+            relax_block!(v,g,h,cuRelaxPad,block_range(    0, d[1],    0, d[2],    0,rs[3]),threads_pad)
+            relax_block!(v,g,h,cuRelaxPad,block_range(    0, d[1],    0,rs[2],rs[3],re[3]),threads_pad)
+            relax_block!(v,g,h,cuRelaxPad,block_range(    0,rs[1],rs[2],re[2],rs[3],re[3]),threads_pad)
+            relax_block!(v,g,h,cuRelaxPad,block_range(re[1], d[1],rs[2],re[2],rs[3],re[3]),threads_pad)
+            relax_block!(v,g,h,cuRelaxPad,block_range(    0, d[1],re[2], d[2],rs[3],re[3]),threads_pad)
+            relax_block!(v,g,h,cuRelaxPad,block_range(    0, d[1],    0, d[2],re[3], d[3]),threads_pad)
+
+            # Middle block
+            relax_block!(v,g,h,cuRelax,   block_range(rs[1],re[1],rs[2],re[2],rs[3],re[3]),threads_nopad)
         end
     end
-    return v
-end
 
-
-function relax_block!(v::CuArray{Float32,4},
-                      g::CuArray{Float32,4},
-                      h::CuArray{Float32,4},
-                      fun::CuFunction,
-                      r, threads0=0)
-    global opmod
-
-    if threads0==0
-        config   = launch_configuration(fun)
-        threads0 = config.threads
-    end
-
-    for k=1:min(r.step[3],r.stop[3]-r.start[3]+1),
-        j=1:min(r.step[2],r.stop[2]-r.start[2]+1),
-        i=1:min(r.step[1],r.stop[1]-r.start[1]+1)
-        o  = UInt64.(r.start .+ (i,j,k) .- 2)
-        n  = UInt64.(floor.((r.stop.-(o.+1))./r.step.+1))
-        n1 = prod(n)
-        threads = min(threads0,n1)
-        blocks  = Int32(ceil(n1./threads))
-        setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"o"), o)
-        setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"n"), n)
-        cudacall(fun, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
-                 pointer(v), pointer(g), pointer(h);
-                 threads=threads, blocks=blocks)
-    end
     return v
 end
 
