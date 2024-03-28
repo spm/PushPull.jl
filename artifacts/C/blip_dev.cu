@@ -40,26 +40,10 @@
    a = sym('a',[M,1],'positive');
    A = b.*D + a.*I;
    H = A'*A; % Hessian
+   H(3,:).'
 
    %%%%%%%%%%%%%%%%%%%%%%%%%%%
-   M = 5;
-   a = sym('a',[M,1],'real');
-   b = sym('b',[M,1],'real');
-
-   D = toeplitz([1 -1 zeros(1,M-2)],[1 zeros(1,M-2) -1]);
-   I = eye(M);
-   A = b.*D + a.*I;
-   Ha = A'*A;
-
-   D = -D';
-   A = b.*D + a.*I;
-   Hb = A'*A;
-
-   H  = (Ha+Hb)/2;
-   H(3,:)
-   [0, (b2*(a2 - b2))/2 - (b3*(a3 + b3))/2, a3^2 + b2^2/2 + b3^2 + b4^2/2, (b3*(a3 - b3))/2 - (b4*(a4 + b4))/2, 0]
-
-
+   % Updates are based on:
    % https://en.wikipedia.org/wiki/Jacobi_method
 */
 
