@@ -22,36 +22,63 @@ __device__ float sp_conv(USIZE_t len, const int indices[], const float values[],
 __device__ float sp_odconv(USIZE_t len, const int indices[], const float values[], const float *f)
 {
     int j;
-    float f0 = f[indices[0]], s = values[-1]*f0;
+    float f0 = f[indices[0]], s = 0.0;
     for(j=1; j<len; j++)
         s += values[j]*(f[indices[j]]-f0);
+    s += values[-1]*f0;
     return(s);
+}
+
+__device__ void Hv(float *b, USIZE_t d3, USIZE_t d4, USIZE_t nd, const float *h, const float *v)
+{
+    if(d4)
+    {
+        int ii;
+        for(ii=0; ii<d3; ii++)
+            b[ii] -= h[nd*ii]*v[nd*ii];
+
+        if(d4==2)
+        {
+            int j;
+            for(j=0, ii=d3; j<d3; j++)
+            {
+                int i;
+                for(i=j+1; i<d3; i++, ii++)
+                {
+                    b[j] -= h[ii*nd]*v[nd*i];
+                    b[i] -= h[ii*nd]*v[nd*j];
+                }
+            }
+        }
+    }
 }
 
 __device__ void make_A(float *A, USIZE_t d3, USIZE_t d4, USIZE_t nd, const float *h, const float *values, const int *offset)
 {
-    USIZE_t i;
-
-    for(i=0; i<d3; i++)
+    int j;
+    for(j=0; j<d3; j++)
     {
-        USIZE_t j;
-        A[i+d3*i] = values[offset[i*d3+i]]*1.000001f;
-        for(j=i+1; j<d3; j++)
-            A[i + j*d3] = A[j + i*d3] = values[offset[j*d3+i]];
+        int i, j3 = j*d3, ij = j3+j;
+        A[ij] = values[offset[ij]]*1.000001f;
+        for(i=j+1; i<d3; i++)
+        {
+            ij    = i+j3;
+            A[ij] = A[i*d3+j] = values[offset[ij]];
+        }
     }
 
     if(d4)
     {
-        USIZE_t ii;
-        for(i=0; i<d3; i++)
-            A[i+d3*i] += h[nd*i]*1.000001f;
+        int ii;
+        for(ii=0; ii<d3; ii++)
+            A[ii+d3*ii] += h[nd*ii]*1.000001f;
 
         if(d4==2)
         {
-            for(i=0, ii=d3; i<d3; i++)
+            for(j=0, ii=d3; j<d3; j++)
             {
-                USIZE_t j;
-                for(j=i+1; j<d3; j++, ii++)
+                int i;
+                for(i=j+1; i<d3; i++, ii++)
                     A[i + j*d3] = A[j + i*d3] += h[ii*nd];
             }
         }
@@ -64,7 +91,7 @@ __device__ void relax_padded1(USIZE_t i, USIZE_t j, USIZE_t k,
                              const int *offset, const int *length, const float *values, const int *patch_indices,
                              const USIZE_t *dp, const int *bnd)
 {
-    USIZE_t m, nd, d3 = d[3];
+    USIZE_t m = i+d[0]*(j+d[1]*k), nd = d[0]*d[1]*d[2], d3 = d[3];
     float patch[BUFLEN];
     float *A = patch, *p = patch + MAXN*MAXN, *x = patch+MAXN*(MAXN+1); /* re-use memory */
     float b[MAXN];
@@ -74,21 +101,24 @@ __device__ void relax_padded1(USIZE_t i, USIZE_t j, USIZE_t k,
     off[1]  = (SSIZE_t)j-(SSIZE_t)dp[1]/2;
     off[2]  = (SSIZE_t)k-(SSIZE_t)dp[2]/2;
 
-    m    = i+d[0]*(j+d[1]*k);
     g   += m;
     h   += m;
 
     /* Original i, j & k no-longer needed, so variables are re-used */
-
-    nd   = d[0]*d[1]*d[2];
-
-    for(j=0; j<d3; j++) b[j] = g[nd*j];
-    for(i=0; i<d3; i++)
+    for(i=0; i<d3; i++) b[i] = g[nd*i];
+    for(j=0; j<d3; j++)
     {
-        get_patch(dp, patch, bnd+i*3, off, d, v+i*nd);
-        for(j=0; j<d3; j++)
-            b[j] -= sp_odconv(length[j*d3+i], patch_indices+offset[j*d3+i], values+offset[j*d3+i], patch);
+        int j3 = d3*j;
+        get_patch(dp, patch, bnd+3*j, off, d, v+j*nd);
+        for(i=0; i<d3; i++)
+        {
+            int ij = i+j3;
+            b[i]  -= sp_conv(length[ij], patch_indices+offset[ij], values+offset[ij], patch);
+        }
     }
+
+    v += m; /* shift pointer */
+    Hv(b, d3, d[4], nd, h, v);
 
     /* Construct "diagonal" of L+H, and re-use the "patch" memory */
     make_A(A, d3, d[4], nd, h, values, offset);
@@ -97,8 +127,7 @@ __device__ void relax_padded1(USIZE_t i, USIZE_t j, USIZE_t k,
     choldcf(d3, A, p);
     chollsf(d3, A, p, b, x);
 
-    v += m; /* shift pointer */
-    for(i=0; i<d3; i++, v+=nd) *v = x[i];
+    for(i=0; i<d3; i++, v+=nd) *v += x[i];
 }
 
 
@@ -108,37 +137,45 @@ __device__ void relax1(float *v, const USIZE_t *d, const float *g, const float *
     USIZE_t nd = d[0]*d[1]*d[2], d3 = d[3], i, j;
     float A[MAXN*MAXN], p[MAXN], x[MAXN], b[MAXN];
 
-    for(j=0; j<d3; j++) b[j] = g[nd*j];
-    for(i=0; i<d3; i++)
+    for(i=0; i<d3; i++) b[i] = g[nd*i];
+    for(j=0; j<d3; j++)
     {
-        for(j=0; j<d3; j++)
-            b[j] -= sp_odconv(length[j*d3+i], indices+offset[j*d3+i], values+offset[j*d3+i], v);
+        int j3 = j*d3;
+        for(i=0; i<d3; i++)
+        {
+            int ij = i+j3;
+            b[i]  -= sp_conv(length[ij], indices+offset[ij], values+offset[ij], v);
+        }
     }
 
-    /* Construct "diagonal" of L+H, and re-use the "patch" memory */
+    Hv(b, d3, d[4], nd, h, v);
+
+    /* Construct "diagonal" of L+H */
     make_A(A, d3, d[4], nd, h, values, offset);
 
     /* Compute x = A\b via Cholesky decomposition */
     choldcf(d3, A, p);
     chollsf(d3, A, p, b, x);
 
-    for(i=0; i<d3; i++, v+=nd) *v = x[i];
+    for(i=0; i<d3; i++, v+=nd) *v += x[i];
 }
 
 
 __device__ void vel2mom1(float *u, const USIZE_t *d, const float *v,
                          const int *offset, const int *length, const float *values, const int *indices)
 {
-    USIZE_t d3 = d[3], j;
+    int d3 = d[3], i;
 
-    for(j=0; j<d3; j++)
+    for(i=0; i<d3; i++)
     {
-        USIZE_t i;
-        int  *o = (int *)offset + j*d3;
+        int j;
         float t = 0.0;
-        for(i=0; i<d3; i++)
-            t += sp_conv(length[j*d3+i], indices+o[i], values+o[i], v);
-        u[indices[offset[j]]] = t;
+        for(j=0; j<d3; j++)
+        {
+            int ij = i+d3*j;
+            t     += sp_conv(length[ij], indices+offset[ij], values+offset[ij], v);
+        }
+        u[indices[offset[i*d3]]] = t;
     }
 }
 
@@ -156,14 +193,13 @@ __device__ void vel2mom_padded1(USIZE_t i, USIZE_t j, USIZE_t k, float *u, const
 
     for(j=0; j<d3; j++)
     {
-        int  *o = (int *)offset + j*d3;
-        float t = 0.0;
+        get_patch(dp, patch, bnd+3*j, off, d, v+j*nd);
         for(i=0; i<d3; i++)
         {
-            get_patch(dp, patch, bnd+i*3, off, d, v+i*nd);
-            t += sp_conv(length[j*d3+i], patch_indices+o[i], values+o[i], patch);
+            int ij = i+j*d3;
+            int o  = offset[ij];
+            u[m + i*nd] += sp_conv(length[ij], patch_indices+o, values+o, patch);
         }
-        u[m + j*nd] = t;
     }
 }
 

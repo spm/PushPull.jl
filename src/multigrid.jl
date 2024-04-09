@@ -17,7 +17,7 @@ PyramidType = Dict{NTuple{3, Int64}, HessType}
 Restriction (downsampling to a coarser grid) in 3D.
 
 """
-function restrict(f1::VolType, d0::NTuple{3,Int}=Int64.(ceil.(dim(f1)./2)), deg::Integer=1)
+function restrict(f1::VolType, d0::NTuple{3,Int}=Int64.(ceil.(dim(f1)./2)), deg::Integer=2)
     d1  = dim(f1)
     zm  = d0./d1;
     os  = (1 .- zm)./2
@@ -25,7 +25,7 @@ function restrict(f1::VolType, d0::NTuple{3,Int}=Int64.(ceil.(dim(f1)./2)), deg:
     f0  = affine_push(f1, Mat, d0, Settings(deg,(1,1,1),true))
 
     c1  = typeof(f1)(undef,(size(f1)[1:3]...,1))
-    c1 .= Float32(prod(d0)/prod(d1))
+    c1 .= 1f0 #Float32(prod(d0)/prod(d1))
     c0  = affine_push(c1, Mat, d0, Settings(deg,(1,1,1),true))
     f0 ./= c0
 
@@ -39,7 +39,7 @@ end
 Prolongation (interpolating to a finer grid) in 3D.
 
 """
-function prolong(f0::VolType, d1::NTuple{3,Int}=2dim(f0), deg::Integer=1)
+function prolong(f0::VolType, d1::NTuple{3,Int}=2dim(f0), deg::Integer=2)
     d0  = dim(f0)
     zm  = d0./d1;
     os  = (1 .- zm)./2
@@ -131,15 +131,15 @@ function hessian_pyramid(h::VolType,
     vx    = Float32.(vx)
     reg   = Float32.(reg)
     bnd   = [2 1 1; 1 2 1; 1 1 2]
-    regop(d,vx,reg) = sparsify(reduce2fit!(registration_operator(vx, reg), d, bnd), d)
+    regop(d,vx,reg,vx0) = sparsify(reduce2fit(registration_operator(vx, reg,vx0), d, bnd), d)
     d0    = d = dim(h)
     HL    = PyramidType()
-    HL[d] = HessType(h,regop(d,vx,reg),bnd)
+    HL[d] = HessType(h,regop(d,vx,reg,vx),bnd)
     while any(d .> 1)
         h     = restrict(h)
         h[:,:,:,1:3] .*= 1.0001f0
         d     = dim(h)
-        HL[d] = HessType(h , regop(d,Float32.(vx.*d0./d),reg), bnd)
+        HL[d] = HessType(h , regop(d,Float32.(vx.*d0./d),reg,vx), bnd)
     end
     return HL
 end
@@ -168,4 +168,48 @@ function vcycle!(v::VolType, g::VolType, HL::PyramidType; nit_pre::Integer=4, ni
     return v
 end
 
+function vcycle_verb!(v::VolType, g::VolType, HL::PyramidType; nit_pre::Integer=4, nit_post::Integer=4)
+    function res(v,HL,g,txt)
+        u   = HLv(v, HL)
+        pre = repeat("    ", Int.(round(log2(maximum(size(g)[1:3])))))
+        print(pre, size(g)[1:3], " ", txt, " ", sum((u.-g).^2),"\n")
+    end
+
+    if all(dim(v).==1)
+        res(v,HL,g,"pre  ")
+        relax!(g, HL, nit_pre, v)
+        res(v,HL,g,"post ")
+    else
+        res(v,HL,g,"pre  ")
+        relax!(g, HL, nit_pre, v)
+        res(v,HL,g,"relax")
+        g1 = restrict(g .- HLv(v, HL))
+        v1 = zero(g1)
+        vcycle_verb!(v1,g1,HL; nit_pre=nit_pre, nit_post=nit_post)
+        v .+= prolong(v1, dim(v))
+        res(v,HL,g,"prolo")
+        relax!(g, HL, nit_post, v)
+        res(v,HL,g,"post ")
+    end
+    return v
+end
+
+function fcycle!(v::VolType, g::VolType, HL::PyramidType; nit_pre::Integer=4, nit_post::Integer=4)
+    if all(dim(v).==1)
+        relax!(g, HL, nit_pre, v)
+    else
+        relax!(g, HL, nit_pre, v)
+        g1 = restrict(g .- HLv(v, HL))
+        v1 = zero(g1)
+        fcycle!(v1,g1,HL; nit_pre=nit_pre, nit_post=nit_post)
+        v .+= prolong(v1, dim(v))
+        relax!(g, HL, nit_post, v)
+        g1 = restrict(g .- HLv(v, HL))
+        v1 = zero(g1)
+        vcycle!(v1,g1,HL; nit_pre=nit_pre, nit_post=nit_post)
+        v .+= prolong(v1, dim(v))
+        relax!(g, HL, nit_post, v)
+    end
+    return v
+end
 

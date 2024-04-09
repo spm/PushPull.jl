@@ -56,7 +56,7 @@ Linear elastic regularisation can be achieved with
 * Lamé's first parameter (often denoted by λ) = `λ[2]`+`λ[4]`
 
 """
-function registration_operator(vx::Vector{<:Real}, λ::Vector{<:Real})
+function registration_operator(vx::Vector{<:Real}, λ::Vector{<:Real}, vx0::Vector{<:Real} = vx)
     @assert(length(vx)==3,"Wrong sized vx.")
     @assert(length(λ)==4, "Wrong sized λ.")
     d123 = any(λ[[2,4]].!=0) ? 3 : 1
@@ -70,7 +70,7 @@ function registration_operator(vx::Vector{<:Real}, λ::Vector{<:Real})
     if λ[1] != 0
         r = c:c
         for i=1:3
-            L[c,c,c,i] += λ[1]
+            L[c,c,c,i] += λ[1]*vx0[i]^2
         end
     end
     if λ[2] != 0
@@ -78,9 +78,9 @@ function registration_operator(vx::Vector{<:Real}, λ::Vector{<:Real})
         # λ[2] corresponds with the shear modulus
         r3 = (c-1):(c+1)
         for i=1:3
-            L[r3,c,c,i] .+= Δ*(λ[2]*(vx[i]/vx[1])^2) # ∂²vᵢ/∂x₁²
-            L[c,r3,c,i] .+= Δ*(λ[2]*(vx[i]/vx[2])^2) # ∂²vᵢ/∂x₂²
-            L[c,c,r3,i] .+= Δ*(λ[2]*(vx[i]/vx[3])^2) # ∂²vᵢ/∂x₃²
+            L[r3,c,c,i] .+= Δ.*(λ[2]*vx0[i]^2/vx[1]^2) # ∂²vᵢ/∂x₁²
+            L[c,r3,c,i] .+= Δ.*(λ[2]*vx0[i]^2/vx[2]^2) # ∂²vᵢ/∂x₂²
+            L[c,c,r3,i] .+= Δ.*(λ[2]*vx0[i]^2/vx[3]^2) # ∂²vᵢ/∂x₃²
         end
     end
     if λ[3] != 0
@@ -89,98 +89,74 @@ function registration_operator(vx::Vector{<:Real}, λ::Vector{<:Real})
         ΔΔ  = [1,-4,6,-4,1] # Δ * Δ
         ΔΔᵀ = Δ*Δ'          # Δ * Δᵀ
         for i=1:3
-            L[r5, c, c,i] .+= ΔΔ*(λ[3]*(vx[i]/vx[1]^2)^2)
-            L[ c,r5, c,i] .+= ΔΔ*(λ[3]*(vx[i]/vx[2]^2)^2)
-            L[ c, c,r5,i] .+= ΔΔ*(λ[3]*(vx[i]/vx[3]^2)^2)
-            L[r3,r3, c,i] .+= ΔΔᵀ*(2*λ[3]*(vx[i]/(vx[1]*vx[2]))^2)
-            L[r3, c,r3,i] .+= ΔΔᵀ*(2*λ[3]*(vx[i]/(vx[1]*vx[3]))^2)
-            L[ c,r3,r3,i] .+= ΔΔᵀ*(2*λ[3]*(vx[i]/(vx[2]*vx[3]))^2)
+            L[r5, c, c,i] .+= ΔΔ .*  (λ[3]*vx0[i]^2/vx[1]^4)
+            L[ c,r5, c,i] .+= ΔΔ .*  (λ[3]*vx0[i]^2/vx[2]^4)
+            L[ c, c,r5,i] .+= ΔΔ .*  (λ[3]*vx0[i]^2/vx[3]^4)
+            L[r3,r3, c,i] .+= ΔΔᵀ.*(2*λ[3]*vx0[i]^2/(vx[1]*vx[2])^2)
+            L[r3, c,r3,i] .+= ΔΔᵀ.*(2*λ[3]*vx0[i]^2/(vx[1]*vx[3])^2)
+            L[ c,r3,r3,i] .+= ΔΔᵀ.*(2*λ[3]*vx0[i]^2/(vx[2]*vx[3])^2)
         end
     end
     if λ[4] != 0
         # Squared divergence
         # λ[4]-λ[2] corresponds with Lame's first parameter
         ∇   = [-1/2, 0, 1/2]  # Gradient operator ∂/∂x
-        ∇∇ᵀ = ∇*∇'
-        L[r3, c, c,1] .+= λ[4]*Δ   # ∂²v₁/∂x₁²
-        L[ c,r3, c,2] .+= λ[4]*Δ   # ∂²v₂/∂x₂²
-        L[ c, c,r3,3] .+= λ[4]*Δ   # ∂²v₃/∂x₃²
-        L[r3,r3, c,4] .+= λ[4]*∇∇ᵀ # ∂²v₃/∂x₁∂x₂ ??
-        L[r3, c,r3,5] .+= λ[4]*∇∇ᵀ # ∂²v₂/∂x₁∂x₃ ??
-        L[ c,r3,r3,6] .+= λ[4]*∇∇ᵀ # ∂²v₁/∂x₂∂x₃ ??
+        ∇∇ᵀ = -∇*∇'
+        L[r3, c, c,1] .+= Δ  .*(λ[4]*vx0[1]^2/vx[1]^2)   # ∂²v₁/∂x₁²
+        L[ c,r3, c,2] .+= Δ  .*(λ[4]*vx0[2]^2/vx[2]^2)   # ∂²v₂/∂x₂²
+        L[ c, c,r3,3] .+= Δ  .*(λ[4]*vx0[3]^2/vx[3]^2)   # ∂²v₃/∂x₃²
+        L[r3,r3, c,4] .+= ∇∇ᵀ.*(λ[4]*vx0[1]*vx0[2]/(vx[1]*vx[2])) # ∂²v₃/∂x₁∂x₂ ??
+        L[r3, c,r3,5] .+= ∇∇ᵀ.*(λ[4]*vx0[1]*vx0[3]/(vx[1]*vx[3])) # ∂²v₂/∂x₁∂x₃ ??
+        L[ c,r3,r3,6] .+= ∇∇ᵀ.*(λ[4]*vx0[2]*vx0[3]/(vx[2]*vx[3])) # ∂²v₁/∂x₂∂x₃ ??
     end
-    L
+    return L
 end
 """
-    reduce2fit!(L::Array{<:Real,4}, d::NTuple{3,Integer})
+    reduce2fit(L::Array{<:Real,4}, d::NTuple{3,Integer})
 
 Take the regularisation operator `L`, and (if necessary) reduce its
 dimensions so that it fits with a set of image dimensions `d`.
 
 """
-function reduce2fit!(L::Union{Array{<:Real,4},CuArray{<:Real,4}}, d::NTuple{3,Integer},
+function reduce2fit(L::Union{Array{<:Real,4},CuArray{<:Real,4}}, d::NTuple{3,Integer},
                      bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
     dp = size(L)
     c  = Int32.((dp[1:3].+1)./2)
-    r0 = max.(c.-d,0)
-
-    for dim=1:3
-        if bnd[1,dim]==0 || d[1]==1
-            r  = [1:r0[1]; (dp[1]+1-r0[1]):dp[1]]
-        else
-            r = []
-        end
-        if ~isempty(r)
-            if bnd[1,dim]==2
-                w                   = ones(dp[1])
-                w[[c[1]-1,c[1]+1]] .= -1
-                w = reshape(w[r],(length(r),1,1))
-                L[[c[1]],:,:,dim] .+= sum(L[r,:,:,dim].*w,dims=1)
-            else
-                L[[c[1]],:,:,dim] .+= sum(L[r,:,:,dim],dims=1)
+    a  = [1.,-1.]
+    if d[1]==1
+        W = ones(Float64,dp[1],dp[4])
+        for dim=1:dp[4]
+            if dim <=size(bnd,2) && bnd[1,dim]==2
+                W[:,dim] = a[mod.((1:dp[1]) .- c[1],2).+1]
             end
-            L[r,:,:,dim]  .= 0
         end
-
-        if bnd[2,dim]==0 || d[2]==1
-            r  = [1:r0[2]; (dp[2]+1-r0[2]):dp[2]]
-        else
-            r = []
-        end
-        if ~isempty(r)
-            if bnd[2,dim]==2
-                w                   = ones(dp[2])
-                w[[c[2]-1,c[2]+1]] .= -1
-                w = reshape(w[r],(1,length(r),1))
-                L[:,[c[2]],:,dim] .+= sum(L[:,r,:,dim].*w,dims=2)
-            else
-                L[:,[c[2]],:,dim] .+= sum(L[:,r,:,dim],dims=2)
-            end
-            L[:,r,:,dim]  .= 0
-        end
-
-        if bnd[3,dim]==0 || d[3]==1
-            r  = [1:r0[3]; (dp[3]+1-r0[3]):dp[3]]
-        else
-            r  = []
-        end
-        if ~isempty(r)
-            if bnd[3,dim]==2
-                w                   = ones(dp[3])
-                w[[c[3]-1,c[3]+1]] .= -1
-                w = reshape(w[r],(1,1,length(r)))
-                L[:,:,[c[3]],dim] .+= sum(L[:,:,r,dim].*w,dims=3)
-            else
-                L[:,:,[c[3]],dim] .+= sum(L[:,:,r,dim],dims=3)
-            end
-            L[:,:, r,dim]  .= 0
-        end
+        W = reshape(W,(dp[1],1,1,dp[4]))
+        L = Float32.(sum(W.*L,dims=1))
     end
-    msk = sum(L.!=0,dims=4)
-    i1  = sum(msk,dims=(2,3))[:] .!= 0
-    i2  = sum(msk,dims=(1,3))[:] .!= 0
-    i3  = sum(msk,dims=(1,2))[:] .!= 0
-    return L[i1[:],i2[:],i3[:],:]
+
+    if d[2]==1
+        W = ones(Float64,dp[2],dp[4])
+        for dim=1:dp[4]
+            if dim <=size(bnd,2) && bnd[2,dim]==2
+                W[:,dim] = a[mod.((1:dp[2]) .- c[2],2).+1]
+            end
+        end
+        W = reshape(W,(1,dp[2],1,dp[4]))
+        L = Float32.(sum(W.*L,dims=2))
+    end
+
+    if d[3]==1
+        W = ones(Float64,dp[3],dp[4])
+        for dim=1:dp[4]
+            if dim <=size(bnd,2) && bnd[3,dim]==2
+                W[:,dim] = a[mod.((1:dp[3]) .- c[3],2).+1]
+            end
+        end
+        W = reshape(W,(1,1,dp[3],dp[4]))
+        L = Float32.(sum(W.*L,dims=3))
+    end
+
+    return L
 end
 
 
@@ -243,7 +219,7 @@ function sparsify(L::Array{<:Real,4}, d::NTuple{3,Integer}, nd=3)
             end
             B[(to+1):(to+nnz[i,j])] = A[1:nnz[i,j],i,j];
             o[i,j] = to;
-            to += nnz[i,j]+1
+            to    += nnz[i,j]+1
         end
         return B, o
     end
@@ -284,8 +260,8 @@ function sparsify(L::Array{<:Real,4}, d::NTuple{3,Integer}, nd=3)
             nnz[c1,c2] += 1
             nnz[c2,c1] += 1
             Ov[nnz[c1,c2],c1,c2] = Ov[nnz[c2,c1],c2,c1] = L[cv[1],cv[2],cv[3],c]
-            Oi[nnz[c1,c2],c1,c2] = image_offset(cv[1],cv[2],cv[3],c1)
-            Oi[nnz[c2,c1],c2,c1] = image_offset(cv[1],cv[2],cv[3],c2)
+            Oi[nnz[c1,c2],c1,c2] = image_offset(cv[1],cv[2],cv[3],c2)
+            Oi[nnz[c2,c1],c2,c1] = image_offset(cv[1],cv[2],cv[3],c1)
             Pi[nnz[c1,c2],c1,c2] = Pi[nnz[c2,c1],c2,c1] = patch_offset(cv[1],cv[2],cv[3])
 
             for k=1:size(L,3), j=1:size(L,2), i=1:size(L,1)
@@ -294,8 +270,8 @@ function sparsify(L::Array{<:Real,4}, d::NTuple{3,Integer}, nd=3)
                         nnz[c1,c2] += 1
                         nnz[c2,c1] += 1
                         Ov[nnz[c1,c2],c1,c2] = Ov[nnz[c2,c1],c2,c1] = L[i,j,k,c]
-                        Oi[nnz[c1,c2],c1,c2] = image_offset(i,j,k,c1)
-                        Oi[nnz[c2,c1],c2,c1] = image_offset(i,j,k,c2)
+                        Oi[nnz[c1,c2],c1,c2] = image_offset(i,j,k,c2)
+                        Oi[nnz[c2,c1],c2,c1] = image_offset(i,j,k,c1)
                         Pi[nnz[c1,c2],c1,c2] = Pi[nnz[c2,c1],c2,c1] = patch_offset(i,j,k)
                     end
                 end
@@ -306,14 +282,17 @@ function sparsify(L::Array{<:Real,4}, d::NTuple{3,Integer}, nd=3)
             nnz[c1,c2]          += 1
             nnz[c2,c1]          += 1
             Ov[nnz[c1,c2],c1,c2] = Ov[nnz[c2,c1],c2,c1] = 0.0
-            Oi[nnz[c1,c2],c1,c2] = Oi[nnz[c2,c1],c2,c1] = image_offset(cv[1],cv[2],cv[3],c2)
+            Oi[nnz[c1,c2],c1,c2] = image_offset(cv[1],cv[2],cv[3],c2)
+            Oi[nnz[c2,c1],c2,c1] = image_offset(cv[1],cv[2],cv[3],c1)
             Pi[nnz[c1,c2],c1,c2] = Pi[nnz[c2,c1],c2,c1] = patch_offset(cv[1],cv[2],cv[3])
         end
     end
+
     Ov,  = rearrange(nnz,Ov)
     Oi,o = rearrange(nnz,Oi)
     Pi,o = rearrange(nnz,Pi)
-    kernel = (stride=(size(L,1),size(L,2),size(L,3)), d=d, nchan=nd, offset=o, length=nnz, values=Ov, indices=Oi, patch_indices=Pi)
+    kernel = (stride=(size(L,1),size(L,2),size(L,3)), d=d, nchan=nd, offset=o, length=nnz,
+              values=Ov, indices=Oi, patch_indices=Pi)
     return kernel
 end
 
@@ -487,8 +466,9 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
 end
 
 
-function kernel(d::NTuple{3,Integer}, vx::Vector{<:Real}=[1,1,1], λ::Vector{<:Real}=[0,1,0,0])
-    L = registration_operator(vx,λ)
+function kernel(d::NTuple{3,Integer}, vx::Vector{<:Real}=[1,1,1],
+                λ::Vector{<:Real}=[0,1,0,0],vx0::Vector{<:Real} = vx)
+    L = registration_operator(vx,λ,vx0)
     K = greens(L, d)
 end
 
