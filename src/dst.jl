@@ -56,6 +56,9 @@ end
 
 function dst_scratch(d::NTuple{N, Integer}, dt::DataType) where {N}
     global _scratch_dst
+    if ~@isdefined(_scratch_dst)
+        _scratch_dst = []
+    end
     if dt<:CuArray
         if (length(_scratch_dst) == 2*prod(d)) && (eltype(_scratch_dst)==Complex{eltype(dt)})
             # Already defined
@@ -73,6 +76,7 @@ end
 
 function dst_scratch(d::NTuple{N, Integer}, i::Integer) where {N}
     global _scratch_dst
+    @assert(@isdefined(_scratch_dst))
     @assert(length(_scratch_dst) == 2*prod(d))
     d1    = [d...]
     d1[i] = 2*d[i]
