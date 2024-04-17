@@ -5,7 +5,7 @@ pp = PushPull
 reg = [1e-6, 1., 10., 2.]
 #reg = [0., 10., 0., 0.]
 reg = [1f-6, 10., 0., 0*100.]
-reg = [0., 1., 0., 10]
+reg = [0., 0., 10., 10]
 #reg = [0.,10.,1.,0.]
 
 vx = [1f0,1f0,1f0]
@@ -37,7 +37,7 @@ H[:,:,:,4] .= gx.*gy
 H[:,:,:,5] .= gx.*gz
 H[:,:,:,6] .= gy.*gz
 c  = Int.(round.((d.+1)./2))
-if true
+if false
     g .= 0; g[c...,1] = 1;
     H[:,:,:,4:6] .=0; H[:,:,:,1:3] .= 0; H[2:end-1,2:end-1,:,:] .= 0; H[c...,1:3] .= 1;
 end
@@ -58,7 +58,7 @@ for it=1:8
 end
 end
 
-if false
+if true
 print("\nGPU V-cycle\n")
 gg  = CuArray(g)
 Hg  = CuArray(H)
@@ -73,7 +73,7 @@ for it=1:8
 end
 end
 
-if false
+if true
 print("\nF-cycle\n")
 vc  = zero(g)
 uc  = pp.HLv(vc, HLc)
@@ -85,7 +85,7 @@ for it=1:8
 end
 end
 
-if true
+if false
 print("\nRelax\n")
 HLc = pp.hessian_pyramid(H,vx,reg)
 vc = zero(g)
