@@ -1,7 +1,6 @@
 [[pp_lib]]
 arch = "x86_64"
 os = "linux"
-<<<<<<< HEAD
 git-tree-sha1 = "15515d13c7aae81a3c08c64313aec7ee6020b694"
 lazy = true
     [[pp_lib.download]]
