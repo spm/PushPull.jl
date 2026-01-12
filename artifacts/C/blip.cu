@@ -8,10 +8,10 @@ __global__ void blip(float *u, const USIZE_t *d, const float *g,
 {
     USIZE_t ijk, i, j, k;
     ijk = threadIdx.x + blockDim.x*blockIdx.x;
-    i   = (ijk % n[0])*5 + o[0]; if(i>=d[0]) return;
+    i   = (ijk % n[0])*3 + o[0]; if(i>=d[0]) return;
     ijk =  ijk / n[0];
-    j   = (ijk % n[1])*5 + o[1]; if(j>=d[1]) return;
-    k   = (ijk / n[1])*5 + o[2]; if(k>=d[2]) return;
+    j   = (ijk % n[1])*3 + o[1]; if(j>=d[1]) return;
+    k   = (ijk / n[1])*3 + o[2]; if(k>=d[2]) return;
 
     blip_dev(i, j, k, d, u, g, aa, bb, ab, s);
 }

@@ -13,14 +13,14 @@ void blip_pad(const SSIZE_t i_start, const SSIZE_t i_stop,
               const float *s)
 {
     SSIZE_t i0, j0, k0;
-    for(k0=k_start; k0<MIN(k_stop, k_start+5); k0++)
-        for(j0=j_start; j0<MIN(j_stop, j_start+5); j0++)
-            for(i0=i_start; i0<MIN(i_stop, i_start+5); i0++)
+    for(k0=k_start; k0<MIN(k_stop, k_start+3); k0++)
+        for(j0=j_start; j0<MIN(j_stop, j_start+3); j0++)
+            for(i0=i_start; i0<MIN(i_stop, i_start+3); i0++)
             {
                 SSIZE_t i, j, k;
-                for(k=k0; k<k_stop; k+=5)
-                    for(j=j0; j<j_stop; j+=5)
-                        for(i=i0; i<i_stop; i+=5)
+                for(k=k0; k<k_stop; k+=3)
+                    for(j=j0; j<j_stop; j+=3)
+                        for(i=i0; i<i_stop; i+=3)
                             blip_dev(i, j, k, d, u, g, aa, bb, ab, s);
             }
 }
@@ -34,18 +34,18 @@ void blip_nopad(const SSIZE_t i_start, const SSIZE_t i_stop,
                 const float *s)
 {
     SSIZE_t i0, j0, k0;
-    for(k0=k_start; k0<MIN(k_stop, k_start+5); k0++)
-        for(j0=j_start; j0<MIN(j_stop, j_start+5); j0++)
-            for(i0=i_start; i0<MIN(i_stop, i_start+5); i0++)
+    for(k0=k_start; k0<MIN(k_stop, k_start+3); k0++)
+        for(j0=j_start; j0<MIN(j_stop, j_start+3); j0++)
+            for(i0=i_start; i0<MIN(i_stop, i_start+3); i0++)
             {
                 SSIZE_t i, j, k;
-                for(k=k0; k<k_stop; k+=5)
+                for(k=k0; k<k_stop; k+=3)
                 {
                     SSIZE_t ok = k*d[1];
-                    for(j=j0; j<j_stop; j+=5)
+                    for(j=j0; j<j_stop; j+=3)
                     {
                         SSIZE_t oj = d[0]*(j + ok); 
-                        for(i=i0; i<i_stop; i+=5)
+                        for(i=i0; i<i_stop; i+=3)
                         {
                             SSIZE_t oi = oj + i;
                             blip_nopad_dev(d, u+oi, g+oi, aa+oi, bb+oi, ab+oi, s);

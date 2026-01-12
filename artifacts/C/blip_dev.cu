@@ -68,11 +68,11 @@ __device__ void blip_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, floa
     /* Likelihood part */
     t   = g[ii] - (((u[o1]-uii)* bb[o2]         + (u[o5]-uii)* bb[o4])/(-4)
                  + ((u[o2]-uii)*(ab[o2]-ab[ii]) + (u[o4]-uii)*(ab[ii]-ab[o4]))/2
-                 +         uii *(aa[ii]+(ab[o2]-ab[o4])/2));
+                 + uii * (aa[ii]+(ab[o2]-ab[o4])/2));
 
     /* Begin to compute the denominator in the Jacobi update */
-    w0  = aa[ii] + (bb[o2] + bb[o4])/4;
-
+/*  w0  = aa[ii] + (bb[o2] + bb[o4])/4; */
+    w0  = aa[ii] + bb[ii] + (bb[o2] + bb[o4])/2;
 
     /* Bending energy regularisation part */
     /* u[i,j-1,k] + u[i,j+1,k] */
@@ -129,7 +129,7 @@ __device__ void blip_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, floa
     w0 -= 4*(w = 2*v0*v2);
     t  -= ((u[o2+o1]-uii) + (u[o2+o5]-uii) + (u[o4+o1]-uii) + (u[o4+o5]-uii))*w;
 
-    u[ii] += t/(w0*1.000001);
+    u[ii] += t/(w0*1.00001);
 }
 
 __device__ void blip_nopad_dev(const USIZE_t *d, float *u,
@@ -143,8 +143,9 @@ __device__ void blip_nopad_dev(const USIZE_t *d, float *u,
     u0  = u[0];
     t   = g[0] - (((u[-o5]-u0)* bb[-o4]        + (u[o5]-u0)* bb[o4])/(-4)
                 + ((u[-o4]-u0)*(ab[-o4]-ab[0]) + (u[o4]-u0)*(ab[0]-ab[o4]))/2
-                +          u0 *(aa[0]+(ab[-o4]-ab[o4])/2));
-    w0  = aa[0] + (bb[-o4] + bb[o4])/4;
+                + u0 * (aa[0]+(ab[-o4]-ab[o4])/2));
+/*  w0  = aa[0] + (bb[-o4] + bb[o4])/4; */
+    w0  = aa[0] + bb[0] + (bb[-o4] + bb[o4])/2;
 
     w0 -= 2*(w = -4*v1*sv);
     t  -= ((u[-o4]-u0)+(u[o4]-u0))*w;
@@ -188,7 +189,7 @@ __device__ float hu_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, const
     if (aa != (const float *)NULL)
         t   = (u[o1]-uii)*(-bb[o2]/4)       + (u[o5]-uii)*(-bb[o4]/4)
             + (u[o2]-uii)*(ab[o2]-ab[ii])/2 + (u[o4]-uii)*(ab[ii]-ab[o4])/2
-            +        uii *(aa[ii]+(ab[o2]-ab[o4])/2);
+            + uii * (aa[ii]+(ab[o2]-ab[o4])/2);
     else
         t = 0.0;
 
@@ -239,11 +240,11 @@ __device__ float hu_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, const
     w   = -4*v2*sv;
     t  += ((u[o2]-uii) + (u[o4]-uii))*w;
 
-    o1 = BOUND(i-1,d[0])-i;
-    o5 = BOUND(i+1,d[0])-i;
+    o1  = BOUND(i-1,d[0])-i;
+    o5  = BOUND(i+1,d[0])-i;
 
     /* u[i-1,j,k-1] + u[i+1,j,k-1] + u[i-1,j,k+1] + u[i+1,j,k+1] */
-    w  = 2*v0*v2;
+    w   = 2*v0*v2;
     t  += ((u[o2+o1]-uii) + (u[o2+o5]-uii) + (u[o4+o1]-uii) + (u[o4+o5]-uii))*w;
 
     return(t);
