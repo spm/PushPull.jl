@@ -21,6 +21,9 @@ pushpull.$EXT : pushpull.c pushpull_dev.cu
 
 blip.ptx: blip.cu blip_dev.cu
 
+blip.so: blip.c blip_dev.cu
+
+blip.dll: blip.c blip_dev.cu
 
 #pushpull.$EXT : pushpull.c pushpull_dev.cu
 #	$(CC) -Wall -fPIC -O3 -c pushpull.c

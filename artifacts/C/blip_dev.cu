@@ -34,20 +34,24 @@
    % The form of the likelihood Hessian
    % The general form is:
    M = 5;
-   D = toeplitz([0 1 zeros(1,M-3) -1]/2,[0 -1 zeros(1,M-3) 1]/2);
+   D = toeplitz([0 -1 zeros(1,M-3) 1]/2,[0 1 zeros(1,M-3) -1]/2);
    I = eye(M);
+   c = sym('c',[M,1],'positive');
    b = sym('b',[M,1],'positive');
    a = sym('a',[M,1],'positive');
-   A = b.*D + a.*I;
-   H = A'*A; % Hessian
-   H(3,:).'
+   S = b.*D + a.*I;
+   g = S'*c; % Gradient
+   H = S'*S; % Hessian
+   h = H(3,:).'
 
    %%%%%%%%%%%%%%%%%%%%%%%%%%%
    % Updates are based on:
    % https://en.wikipedia.org/wiki/Jacobi_method
 */
 
-#define MOD(i,m) ((i)%(m)+(m))%(m)
+#define TINY 1e-5
+
+#define MOD(i,m) ((i)%(signed)(m)+(m))%(m)
 #define BOUND(j,m) ((t_=MOD((signed)(j),(signed)(m)<<1))<(m) ? t_ : (((m)<<1)-1-t_)) /* reflect */
 /* #define BOUND(j,m) MOD((signed)(j),(signed)(m)) */ /* circulant */
 
@@ -58,10 +62,10 @@ __device__ void blip_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, floa
     SSIZE_t ii = i + d[0]*(j + d[1]*k), o1, o2, o4, o5;
     SSIZE_t t_;
 
-    o1  = ii+(BOUND(j-2,d[1])-j)*d[0];
-    o2  = ii+(BOUND(j-1,d[1])-j)*d[0];
-    o4  = ii+(BOUND(j+1,d[1])-j)*d[0];
-    o5  = ii+(BOUND(j+2,d[1])-j)*d[0];
+    o1  = ii+(MOD((signed)j-2,d[1])-j)*d[0];
+    o2  = ii+(MOD((signed)j-1,d[1])-j)*d[0];
+    o4  = ii+(MOD((signed)j+1,d[1])-j)*d[0];
+    o5  = ii+(MOD((signed)j+2,d[1])-j)*d[0];
 
     uii = u[ii]; /* Middle voxel */
 
@@ -71,8 +75,7 @@ __device__ void blip_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, floa
                  + uii * (aa[ii]+(ab[o2]-ab[o4])/2));
 
     /* Begin to compute the denominator in the Jacobi update */
-/*  w0  = aa[ii] + (bb[o2] + bb[o4])/4; */
-    w0  = aa[ii] + bb[ii] + (bb[o2] + bb[o4])/2;
+    w0  = aa[ii] + (bb[o2] + bb[o4])/4;
 
     /* Bending energy regularisation part */
     /* u[i,j-1,k] + u[i,j+1,k] */
@@ -129,7 +132,9 @@ __device__ void blip_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, floa
     w0 -= 4*(w = 2*v0*v2);
     t  -= ((u[o2+o1]-uii) + (u[o2+o5]-uii) + (u[o4+o1]-uii) + (u[o4+o5]-uii))*w;
 
-    u[ii] += t/(w0*1.00001);
+    w      = TINY*sv*sv;
+    t     -= uii*w;
+    u[ii] += t/(w0 + w);
 }
 
 __device__ void blip_nopad_dev(const USIZE_t *d, float *u,
@@ -144,8 +149,7 @@ __device__ void blip_nopad_dev(const USIZE_t *d, float *u,
     t   = g[0] - (((u[-o5]-u0)* bb[-o4]        + (u[o5]-u0)* bb[o4])/(-4)
                 + ((u[-o4]-u0)*(ab[-o4]-ab[0]) + (u[o4]-u0)*(ab[0]-ab[o4]))/2
                 + u0 * (aa[0]+(ab[-o4]-ab[o4])/2));
-/*  w0  = aa[0] + (bb[-o4] + bb[o4])/4; */
-    w0  = aa[0] + bb[0] + (bb[-o4] + bb[o4])/2;
+    w0  = aa[0] + (bb[-o4] + bb[o4])/4;
 
     w0 -= 2*(w = -4*v1*sv);
     t  -= ((u[-o4]-u0)+(u[o4]-u0))*w;
@@ -169,7 +173,10 @@ __device__ void blip_nopad_dev(const USIZE_t *d, float *u,
     t  -= ((u[-o5]-u0) + (u[o5]-u0))*w;
     w0 -= 2*(w = -4*v0*sv);
     t  -= ((u[-1] -u0) + (u[1] -u0))*w;
-    u[0] += t/(w0*1.000001);
+
+    w     = TINY*sv*sv;
+    t    -= u0*w;
+    u[0] += t/(w0 + w);
 }
 
 
@@ -180,10 +187,10 @@ __device__ float hu_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, const
     SSIZE_t ii = i + d[0]*(j + d[1]*k), o1, o2, o4, o5;
     SSIZE_t t_;
 
-    o1 = ii+(BOUND(j-2,d[1])-j)*d[0];
-    o2 = ii+(BOUND(j-1,d[1])-j)*d[0];
-    o4 = ii+(BOUND(j+1,d[1])-j)*d[0];
-    o5 = ii+(BOUND(j+2,d[1])-j)*d[0];
+    o1 = ii+(MOD((signed)j-2,(signed)d[1])-(signed)j)*(signed)d[0];
+    o2 = ii+(MOD((signed)j-1,(signed)d[1])-(signed)j)*(signed)d[0];
+    o4 = ii+(MOD((signed)j+1,(signed)d[1])-(signed)j)*(signed)d[0];
+    o5 = ii+(MOD((signed)j+2,(signed)d[1])-(signed)j)*(signed)d[0];
 
     uii = u[ii];
     if (aa != (const float *)NULL)
@@ -246,6 +253,9 @@ __device__ float hu_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, const
     /* u[i-1,j,k-1] + u[i+1,j,k-1] + u[i-1,j,k+1] + u[i+1,j,k+1] */
     w   = 2*v0*v2;
     t  += ((u[o2+o1]-uii) + (u[o2+o5]-uii) + (u[o4+o1]-uii) + (u[o4+o5]-uii))*w;
+
+    w   = TINY*sv*sv;
+    t  += uii*w;
 
     return(t);
 }

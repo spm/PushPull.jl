@@ -240,7 +240,7 @@ Put interpolation settings into global variables on GPU.
 """
 function gpusettings(d₀, n₁, sett::Settings)
     global ppmod
-    setindex!(CuGlobal{NTuple{3,UInt64}}(ppmod,"dp"),  sett.deg.+UInt64(1))
+    setindex!(CuGlobal{NTuple{3,UInt64}}(ppmod,"dp"),  UInt64.(sett.deg).+UInt64(1))
    #setindex!(CuGlobal{NTuple{3, Int32}}(ppmod,"bnd"), sett.bnd)
     setindex!(CuGlobal{Int32}(ppmod,"ext"),            sett.ext)
 
