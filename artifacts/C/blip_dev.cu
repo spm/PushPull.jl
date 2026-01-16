@@ -49,7 +49,7 @@
    % https://en.wikipedia.org/wiki/Jacobi_method
 */
 
-#define TINY 1e-5
+#define TINY 1e-6
 
 #define MOD(i,m) ((i)%(signed)(m)+(m))%(m)
 #define BOUND(j,m) ((t_=MOD((signed)(j),(signed)(m)<<1))<(m) ? t_ : (((m)<<1)-1-t_)) /* reflect */
@@ -132,7 +132,7 @@ __device__ void blip_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, floa
     w0 -= 4*(w = 2*v0*v2);
     t  -= ((u[o2+o1]-uii) + (u[o2+o5]-uii) + (u[o4+o1]-uii) + (u[o4+o5]-uii))*w;
 
-    w      = TINY*sv*sv;
+    w      = TINY; /* *(sv*sv + TINY); */
     t     -= uii*w;
     u[ii] += t/(w0 + w);
 }
@@ -174,7 +174,7 @@ __device__ void blip_nopad_dev(const USIZE_t *d, float *u,
     w0 -= 2*(w = -4*v0*sv);
     t  -= ((u[-1] -u0) + (u[1] -u0))*w;
 
-    w     = TINY*sv*sv;
+    w     = TINY; /* *(sv*sv + TINY); */
     t    -= u0*w;
     u[0] += t/(w0 + w);
 }
@@ -254,7 +254,7 @@ __device__ float hu_dev(USIZE_t i, USIZE_t j, USIZE_t k, const USIZE_t *d, const
     w   = 2*v0*v2;
     t  += ((u[o2+o1]-uii) + (u[o2+o5]-uii) + (u[o4+o1]-uii) + (u[o4+o5]-uii))*w;
 
-    w   = TINY*sv*sv;
+    w   = TINY; /* *(sv*sv + TINY); */
     t  += uii*w;
 
     return(t);
