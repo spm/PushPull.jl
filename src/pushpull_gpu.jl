@@ -240,12 +240,12 @@ Put interpolation settings into global variables on GPU.
 """
 function gpusettings(d₀, n₁, sett::Settings)
     global ppmod
-    setindex!(CuGlobal{NTuple{3,UInt64}}(ppmod,"dp"),  UInt64.(sett.deg).+UInt64(1))
+    setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"dp"),  Csize_t.(sett.deg).+Csize_t(1))
    #setindex!(CuGlobal{NTuple{3, Int32}}(ppmod,"bnd"), sett.bnd)
     setindex!(CuGlobal{Int32}(ppmod,"ext"),            sett.ext)
 
-    setindex!(CuGlobal{NTuple{3,UInt64}}(ppmod,"d0"),  UInt64.(d₀[1:3]))
-    setindex!(CuGlobal{UInt64}(ppmod,"n1"),            UInt64(n₁))
+    setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"d0"),  Csize_t.(d₀[1:3]))
+    setindex!(CuGlobal{Csize_t}(ppmod,"n1"),            Csize_t(n₁))
     nothing
 end
 
@@ -332,7 +332,7 @@ end
 
 function gpusettings_aff(d₁,Aff)
     global ppmod
-    setindex!(CuGlobal{NTuple{3,UInt64}}(ppmod,"d1"),  UInt64.(d₁))
+    setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"d1"),  Csize_t.(d₁))
     Aff = Aff[1:3,:]                    # Assume Aff[4,:]==[0 0 0 1]
     Aff[:,4] .= sum(Aff,dims=2) .- 1.0  # Adjust for 0-offset (CUDA code)
     Aff = (Float32.(Aff)[:]...,)

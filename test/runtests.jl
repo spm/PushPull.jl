@@ -141,11 +141,23 @@ end
     @test operator_consistency(d,[1e-3, 1.,9.,0.], true) < tol
     @test operator_consistency(d,[1e-3, 1.,9.,1.], true) < tol
 
+    d     = (8,7,1)
+    c     = 2
+    f1    = randn(Float32,(d...,c))
+    f2    = randn(Float32,(d...,c))
+    phi   = randn(Float32,(d...,3))
+    phi .+= PushPull.id(d; gpu=false)
     d   = (8,7,1)
     @test operator_consistency(d,[1e-3, 0.,0.,0.], false) < tol
     @test operator_consistency(d,[1e-3, 1.,0.,0.], false) < tol
     @test operator_consistency(d,[1e-3, 1.,9.,0.], false) < tol
     @test operator_consistency(d,[1e-3, 1.,9.,1.], false) < tol
+    d     = (8,7,1)
+    c     = 2
+    f1    = randn(Float32,(d...,c))
+    f2    = randn(Float32,(d...,c))
+    phi   = randn(Float32,(d...,3))
+    phi .+= PushPull.id(d; gpu=false)
 
     d   = (32,31,30)
     @test operator_consistency(d,[1e-3, 0.,0.,0.], false) < tol
@@ -160,16 +172,17 @@ end
     ##################################
     # PUSH, PULL & PULL_GRAD
     ##################################
+    # Comparing numerical vs analytic gradients needs a slightly
+    # high tolerance.
+    tol   = 1e-3
+
     d     = (8,7,1)
     c     = 2
     f1    = randn(Float32,(d...,c))
     f2    = randn(Float32,(d...,c))
     phi   = randn(Float32,(d...,3))
     phi .+= PushPull.id(d; gpu=false)
-
-    # Comparing numerical vs analytic gradients needs a slightly
-    # high tolerance.
-    tol   = 1e-3
+    sett  = PushPull.Settings((3,3,3),(0,1,2),1)
 
     # Testing CPU
 
@@ -236,9 +249,9 @@ end
     # CPU
     sett  = PushPull.Settings((3,3,3),(0,1,2),1)
     @test test_grad(θ -> sum((pull(f1, θ,  sett) .- f2).^2),phi) < tol
-    @test test_grad(θ -> sum((pull(θ,phi,  sett) .- f2).^2),f1)  < tol
-    @test test_grad(θ -> sum((push(f1, θ,d,sett) .- f2).^2),phi) < tol
-    @test test_grad(θ -> sum((push(θ,phi,d,sett) .- f2).^2),f1)  < tol
+    @test test_grad(θ -> sum((pull(θ,phi,  sett) .- f2).^2),f1)  < tol    #
+    @test test_grad(θ -> sum((push(f1, θ,d,sett) .- f2).^2),phi) < tol    #
+    @test test_grad(θ -> sum((push(θ,phi,d,sett) .- f2).^2),f1)  < tol    #
 
     # GPU
     f1   = CuArray(f1)

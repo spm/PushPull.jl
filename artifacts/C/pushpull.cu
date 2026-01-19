@@ -120,9 +120,7 @@ __global__ void push_element(float *f0, const float *phi, const float *f1)
     x[1] = phi[globalThreadIdx+n1]    - 1.0f; if(!isfinite(x[1])) return;
     x[2] = phi[globalThreadIdx+n1*2]  - 1.0f; if(!isfinite(x[2])) return;
 
-    if(ext || (x[0]>=-0.01f && x[0]<=d0[0]-0.99f &&
-               x[1]>=-0.01f && x[1]<=d0[1]-0.99f &&
-               x[2]>=-0.01f && x[2]<=d0[2]-0.99f))
+    if(VOXOK(x,d0))
         push1(d0, f0, (float *)0, bnd, dp, x, fo);
 }
 
@@ -135,13 +133,11 @@ __global__ void pushc_element(float *f0, float *c0, const float *phi, const floa
 
     if(globalThreadIdx >= n1) return;
     fo   = f1[globalThreadIdx];              if(!isfinite(fo))   return;
-    x[0] = phi[globalThreadIdx]      - 1.0f; if(!isfinite(x[0])) return;
-    x[1] = phi[globalThreadIdx+n1]   - 1.0f; if(!isfinite(x[1])) return;
-    x[2] = phi[globalThreadIdx+n1*2] - 1.0f; if(!isfinite(x[2])) return;
+    x[0] = phi[globalThreadIdx]      - 1.0f;
+    x[1] = phi[globalThreadIdx+n1]   - 1.0f;
+    x[2] = phi[globalThreadIdx+n1*2] - 1.0f;
 
-    if(ext || (x[0]>=-0.01f && x[0]<=d0[0]-0.99f &&
-               x[1]>=-0.01f && x[1]<=d0[1]-0.99f &&
-               x[2]>=-0.01f && x[2]<=d0[2]-0.99f))
+    if(VOXOK(x,d0))
         push1(d0, f0, c0, bnd, dp, x, fo);
 }
 
@@ -175,13 +171,11 @@ __global__ void pushg3_element(float *g0, const float *phi, const float *f1)
     float f;
 
     if(globalThreadIdx >= n1) return;
-    x[0] = phi[globalThreadIdx]      - 1.0f; if(!isfinite(x[0])) return;
-    x[1] = phi[globalThreadIdx+n1]   - 1.0f; if(!isfinite(x[1])) return;
-    x[2] = phi[globalThreadIdx+n1*2] - 1.0f; if(!isfinite(x[2])) return;
+    x[0] = phi[globalThreadIdx]      - 1.0f;
+    x[1] = phi[globalThreadIdx+n1]   - 1.0f;
+    x[2] = phi[globalThreadIdx+n1*2] - 1.0f;
 
-    if(ext || (x[0]>=-0.01f && x[0]<=d0[0]-0.99f &&
-               x[1]>=-0.01f && x[1]<=d0[1]-0.99f &&
-               x[2]>=-0.01f && x[2]<=d0[2]-0.99f))
+    if(VOXOK(x,d0))
     {
         f = f1[globalThreadIdx];  if(!ISFINITE(f)) return;
         pushg1a(d0, g0, bnd, dp, x, f);
@@ -233,10 +227,7 @@ __global__ void affine_push_element(float *f0, const float *f1)
     x[1] = Aff[1]*i + Aff[4]*j + Aff[7]*k + Aff[10];
     x[2] = Aff[2]*i + Aff[5]*j + Aff[8]*k + Aff[11];
 
-    if(ISFINITE(x[0]) && ISFINITE(x[1]) && ISFINITE(x[2]) &&
-       (ext || (x[0]>=-0.01f && x[0]<=d0[0]-0.99f &&
-                x[1]>=-0.01f && x[1]<=d0[1]-0.99f &&
-                x[2]>=-0.01f && x[2]<=d0[2]-0.99f)))
+    if(VOXOK(x,d0))
         push1(d0, f0, (float *)0, bnd, dp, x, fo);
 }
 

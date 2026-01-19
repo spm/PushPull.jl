@@ -37,13 +37,14 @@ function pull(f₀::Array{Float32}, ϕ::Array{Float32},
 
     f₁  = zeros(Float32, (d₁..., dv...))
 
+    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
-        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
+        bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pull), Cvoid,
-              (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
-               Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
+              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+               Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
                pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
-               pointer(d₀), n₁, pointer(bnd), pointer(dp), Cint(sett.ext))
+               pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
     end
     return f₁
 end
@@ -87,15 +88,16 @@ function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32},
 
     ∇f  = zeros(Float32, (d₁..., 3, dv...))
 
+    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
         # void pull_grad(float *∇f, const float *ϕ, const float *f₀,
         #                const USIZE_t *d₀, const USIZE_t n₁, const int *bnd, const USIZE_t *dp, const int ext)
-        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
+        bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pullg), Cvoid,
-              (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
-               Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
+              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+               Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
                pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
-               pointer(d₀), n₁, pointer(bnd), pointer(dp), Cint(sett.ext))
+               pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
     end
     return ∇f
 end
@@ -126,13 +128,14 @@ function pull_hess(f₀::Array{Float32}, ϕ::Array{Float32},
 
     h₁  = zeros(Float32, (d₁..., 3,3, dv...))
 
+    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
-        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
+        bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pullh), Cvoid,
-              (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
-              Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
+              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+              Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
               pointer(h₁, 1 + 9n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
-              pointer(d₀), n₁, pointer(bnd), pointer(dp), Cint(sett.ext))
+              pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
     end
     return h₁
 end
@@ -178,13 +181,14 @@ function push(f₁::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer},
 
     f₀  = zeros(Float32, (d₀..., dv...))
 
+    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
-        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
+        bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:push), Cvoid,
-              (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
-               Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
+              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+               Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
                pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)),
-               pointer(d₀), n₁, pointer(bnd), pointer(dp), Cint(sett.ext))
+               pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
     end
     return f₀
 end
@@ -231,13 +235,14 @@ function push_grad(∇f::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Inte
 
     g₀  = zeros(Float32, (d₀..., dv...))
 
+    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
-        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
+        bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pushg), Cvoid,
-              (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
-              Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
+              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+              Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
               pointer(g₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1)),
-              pointer(d₀), n₁, pointer(bnd), pointer(dp), Cint(sett.ext))
+              pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
     end
     return g₀
 end
@@ -271,17 +276,18 @@ function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3
 
     f₁  = zeros(Float32, (d₁..., dv...))
 
+    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
-        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
+        bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pull_affine), Cvoid,
-              (Ref{Cfloat},  Ptr{Cfloat},
-               Ptr{Csize_t}, Csize_t,
-               Ptr{Csize_t}, Ptr{Cfloat},
-               Ptr{Cint},    Ptr{Csize_t}, Cint),
+              (Ref{Cfloat},  Ref{Cfloat},
+               Ref{Csize_t}, Csize_t,
+               Ref{Csize_t}, Ref{Cfloat},
+               Ref{Cint},    Ref{Csize_t}, Cint),
               pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
               pointer(d₀), n₁,
               pointer(d₁), pointer(A), 
-              pointer(bnd), pointer(dp), Cint(sett.ext))
+              pointer(bnd), pointer(dp), sett.ext)
     end
 
     return f₁
@@ -311,17 +317,18 @@ function affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3
 
     f₀  = zeros(Float32, (d₀..., dv...))
 
+    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
-        bnd = [(length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])...]
+        bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:push_affine), Cvoid,
-              (Ref{Cfloat}, Ptr{Cfloat},
-               Ptr{Csize_t}, Csize_t,
-               Ptr{Csize_t}, Ptr{Cfloat},
-               Ptr{Cint}, Ptr{Csize_t}, Cint),
+              (Ref{Cfloat}, Ref{Cfloat},
+               Ref{Csize_t}, Csize_t,
+               Ref{Csize_t}, Ref{Cfloat},
+               Ref{Cint}, Ref{Csize_t}, Cint),
               pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)),
               pointer(d₀), n₁,
               pointer(d₁), pointer(A),
-              pointer(bnd), pointer(dp), Cint(sett.ext))
+              pointer(bnd), pointer(dp), sett.ext)
     end
     return f₀
 end

@@ -1,19 +1,19 @@
 [[pp_lib]]
 arch = "x86_64"
 os = "linux"
-git-tree-sha1 = "ee1b578df8292629554c3af06740b7b7ce4a3a70"
+git-tree-sha1 = "31537b659f265603333fdc662d4ffdd8181d3201"
 lazy = true
     [[pp_lib.download]]
-    sha256 = "2d9fecaded001f4297dc4351b2bab7b4da41a9b4c57d2c3ec284db840affb441"
+    sha256 = "780cbac54e76264b19e9ca6cf591243e62b9fe739d0cd5bb6904bd5cac53250b"
     #url = "file:///home/john/work/julia/pp_lib.tar.gz"
     url = "https://raw.githubusercontent.com/spm/PushPull.jl/main/artifacts/pp_lib.tar.gz"
 
 [[pp_lib]]
 arch = "x86_64"
 os = "windows"
-git-tree-sha1 = "ee1b578df8292629554c3af06740b7b7ce4a3a70"
+git-tree-sha1 = "31537b659f265603333fdc662d4ffdd8181d3201"
 lazy = true
     [[pp_lib.download]]
-    sha256 = "2d9fecaded001f4297dc4351b2bab7b4da41a9b4c57d2c3ec284db840affb441"
+    sha256 = "780cbac54e76264b19e9ca6cf591243e62b9fe739d0cd5bb6904bd5cac53250b"
     url = "https://raw.githubusercontent.com/spm/PushPull.jl/main/artifacts/pp_lib.tar.gz"
 

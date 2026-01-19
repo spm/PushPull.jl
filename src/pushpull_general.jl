@@ -7,8 +7,8 @@
 Encodes the push-pull settings.
 
 ##  Fields
-* `deg :: Tuple{Integer,Integer,Integer}` - Degree of interpolation 0..4 along each dimention
-* `bnd :: Tuple{Integer,Integer,Integer}` - Boundary conditions 0=wrap/1=reflect/2=?? along each dimension
+* `deg :: Tuple{Integer,Integer,Integer}` - Degree of interpolation 0..4 along each dimension
+* `bnd :: Tuple{Integer,Integer,Integer}` - Boundary conditions 0=wrap/1=reflect/2=fixed along each dimension
 * `ext :: Integer`                        - Extrapolate missing data or not
 
 """
