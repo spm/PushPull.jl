@@ -5,7 +5,6 @@ git-tree-sha1 = "a292ce09889100ca2d19564fb4e2ec1bc0927b09"
 lazy = true
     [[pp_lib.download]]
     sha256 = "10d441160f4146a5e4dea90a5d8d39d23643b246a786f1d9e17a4a38748ef126"
-    #url = "file:///home/john/work/julia/pp_lib.tar.gz"
     url = "https://raw.githubusercontent.com/spm/PushPull.jl/main/artifacts/pp_lib.tar.gz"
 
 [[pp_lib]]
