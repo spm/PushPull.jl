@@ -42,11 +42,13 @@ function TVdenoise!(x::Union{Array{Float32,3},Array{Float32,4}}, y::Union{Array{
 
     d1      = UInt64.(ceil.(d[1:3].-2)./2)
 
-       ccall(dlsym(pplib,:pull), Cvoid,
-             (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
-              Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
-             pointer(f1,1+n1*(i-1)), pointer(phi), pointer(f0,1+n0*(i-1)),
-             pointer(d0), n1, pointer(bnd), pointer(dp), Cint(sett.ext))
+    GC.@preserve f1 phi f0 d0 bnd dp begin
+        ccall(dlsym(pplib,:pull), Cvoid,
+              (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat},
+               Ptr{Csize_t}, Csize_t, Ptr{Cint}, Ptr{Csize_t}, Cint),
+              pointer(f1,1+n1*(i-1)), pointer(phi), pointer(f0,1+n0*(i-1)),
+              pointer(d0), n1, pointer(bnd), pointer(dp), Cint(sett.ext))
+    end
 
     setindex!(CuGlobal{NTuple{   4, UInt64}}(tvmod,"d"),        UInt64.(d))
     setindex!(CuGlobal{NTuple{   3, Float32}}(tvmod,"vox"),     Float32.(vox))
@@ -58,9 +60,11 @@ function TVdenoise!(x::Union{Array{Float32,3},Array{Float32,4}}, y::Union{Array{
             for oj=0:2
                 for oi=0:2
                     setindex!(gl_o, UInt64.((oi,oj,ok)))
-                    ccall(dlsym(:), Cvoid,
-                          (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Csize_t}, Ptr{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat}),
-                          pointer(y), pointer(x), pointer(d), pointer(vox), pointer(lambdap), pointer(lambdal))
+                    GC.@preserve y x d vox lambdap lambdal  begin
+                        ccall(dlsym(:), Cvoid,
+                              (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Csize_t}, Ptr{Cfloat}, Ptr{Cfloat}, Ptr{Cfloat}),
+                              pointer(y), pointer(x), pointer(d), pointer(vox), pointer(lambdap), pointer(lambdal))
+                    end
                 end
             end
         end

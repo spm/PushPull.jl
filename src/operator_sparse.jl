@@ -79,14 +79,16 @@ function vel2mom!(u::Array{Float32,4},
     dp  = Csize_t.([kernel.stride...])
     bnd = Int32.(bnd[:])
 
-    ccall(dlsym(oplib,:vel2mom), Cvoid,
-          (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Csize_t},
-           Ptr{Cint}, Ptr{Cint},
-           Ptr{Cfloat}, Ptr{Cint}, Ptr{Cint}, Ptr{Csize_t}, Ptr{Cint}),
-          pointer(u), pointer(v), pointer(d),
-          pointer(kernel.offset), pointer(kernel.length),
-          pointer(kernel.values), pointer(kernel.indices), pointer(kernel.patch_indices), pointer(dp), pointer(bnd))
-     return u
+    GC.@preserve u v d kernel dp bnd begin
+        ccall(dlsym(oplib,:vel2mom), Cvoid,
+              (Ref{Cfloat}, Ptr{Cfloat}, Ptr{Csize_t},
+               Ptr{Cint}, Ptr{Cint},
+               Ptr{Cfloat}, Ptr{Cint}, Ptr{Cint}, Ptr{Csize_t}, Ptr{Cint}),
+              pointer(u), pointer(v), pointer(d),
+              pointer(kernel.offset), pointer(kernel.length),
+              pointer(kernel.values), pointer(kernel.indices), pointer(kernel.patch_indices), pointer(dp), pointer(bnd))
+    end
+    return u
 end
 
 function vel2mom!(u::CuArray{Float32,4},
@@ -171,13 +173,15 @@ function relax!(g::Array{Float32,4}, h::Array{Float32,4}, kernel::KernelType,
     d   = [d...,]
     dp  = [dp...,]
     for it=1:nit
-        ccall(dlsym(oplib,:relax), Cvoid,
-              (Ref{Cfloat}, Ptr{Csize_t}, Ptr{Cfloat}, Ptr{Cfloat},
-               Ptr{Cint}, Ptr{Cint}, Ptr{Cfloat},
-               Ptr{Cint}, Ptr{Cint}, Ptr{Csize_t}, Ptr{Cint}),
-              pointer(v), pointer(d), pointer(g), pointer(h), 
-              pointer(kernel.offset), pointer(kernel.length), pointer(kernel.values),
-              pointer(kernel.indices), pointer(kernel.patch_indices), pointer(dp), pointer(bnd))
+        GC.@preserve v d g h kernel dp bnd begin
+            ccall(dlsym(oplib,:relax), Cvoid,
+                  (Ref{Cfloat}, Ptr{Csize_t}, Ptr{Cfloat}, Ptr{Cfloat},
+                   Ptr{Cint}, Ptr{Cint}, Ptr{Cfloat},
+                   Ptr{Cint}, Ptr{Cint}, Ptr{Csize_t}, Ptr{Cint}),
+                  pointer(v), pointer(d), pointer(g), pointer(h), 
+                  pointer(kernel.offset), pointer(kernel.length), pointer(kernel.values),
+                  pointer(kernel.indices), pointer(kernel.patch_indices), pointer(dp), pointer(bnd))
+        end
     end
     return v
 end

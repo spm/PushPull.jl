@@ -1,8 +1,3 @@
-#
-
-# Note that the use of `pointer()` is considered unsafe.
-# Behaviour appears to be dependent on the Julia releas used,
-# and will need to be dealt with properly later on.
 
 using Libdl
 
@@ -46,11 +41,13 @@ function pull(f₀::Array{Float32}, ϕ::Array{Float32},
 
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
-        ccall(dlsym(pplib,:pull), Cvoid,
-              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
-               Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
-               pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
-               pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        GC.@preserve f₁ ϕ f₀ d₀ bnd dp begin
+            ccall(dlsym(pplib,:pull), Cvoid,
+                  (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+                   Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
+                   pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
+                   pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        end
     end
     return f₁
 end
@@ -99,11 +96,13 @@ function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32},
         # void pull_grad(float *∇f, const float *ϕ, const float *f₀,
         #                const USIZE_t *d₀, const USIZE_t n₁, const int *bnd, const USIZE_t *dp, const int ext)
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
-        ccall(dlsym(pplib,:pullg), Cvoid,
-              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
-               Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
-               pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
-               pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        GC.@preserve ∇f ϕ f₀ d₀ bnd dp begin
+            ccall(dlsym(pplib,:pullg), Cvoid,
+                  (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+                   Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
+                   pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
+                   pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        end
     end
     return ∇f
 end
@@ -137,11 +136,13 @@ function pull_hess(f₀::Array{Float32}, ϕ::Array{Float32},
 
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
-        ccall(dlsym(pplib,:pullh), Cvoid,
-              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
-              Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
-              pointer(h₁, 1 + 9n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
-              pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        GC.@preserve h₁ ϕ f₀ d₀ bnd dp begin
+            ccall(dlsym(pplib,:pullh), Cvoid,
+                  (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+                  Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
+                  pointer(h₁, 1 + 9n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
+                  pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        end
     end
     return h₁
 end
@@ -190,11 +191,13 @@ function push(f₁::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer},
 
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
-        ccall(dlsym(pplib,:push), Cvoid,
-              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
-               Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
-               pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)),
-               pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        GC.@preserve f₁ ϕ f₀ d₀ bnd dp begin
+            ccall(dlsym(pplib,:push), Cvoid,
+                  (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+                   Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
+                   pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)),
+                   pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        end
     end
     return f₀
 end
@@ -244,11 +247,13 @@ function push_grad(∇f::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Inte
 
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
-        ccall(dlsym(pplib,:pushg), Cvoid,
-              (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
-              Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
-              pointer(g₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1)),
-              pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        GC.@preserve g₀ ϕ ∇f d₀ bnd dp begin
+            ccall(dlsym(pplib,:pushg), Cvoid,
+                  (Ref{Cfloat}, Ref{Cfloat}, Ref{Cfloat},
+                  Ref{Csize_t}, Csize_t, Ref{Cint}, Ref{Csize_t}, Cint),
+                  pointer(g₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1)),
+                  pointer(d₀), n₁, pointer(bnd), pointer(dp), sett.ext)
+        end
     end
     return g₀
 end
@@ -285,15 +290,17 @@ function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3
 
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
-        ccall(dlsym(pplib,:pull_affine), Cvoid,
-              (Ref{Cfloat},  Ref{Cfloat},
-               Ref{Csize_t}, Csize_t,
-               Ref{Csize_t}, Ref{Cfloat},
-               Ref{Cint},    Ref{Csize_t}, Cint),
-              pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
-              pointer(d₀), n₁,
-              pointer(d₁), pointer(A), 
-              pointer(bnd), pointer(dp), sett.ext)
+        GC.@preserve f₁ f₀ d₀ d₁ A bnd dp begin
+            ccall(dlsym(pplib,:pull_affine), Cvoid,
+                  (Ref{Cfloat},  Ref{Cfloat},
+                   Ref{Csize_t}, Csize_t,
+                   Ref{Csize_t}, Ref{Cfloat},
+                   Ref{Cint},    Ref{Csize_t}, Cint),
+                  pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
+                  pointer(d₀), n₁,
+                  pointer(d₁), pointer(A), 
+                  pointer(bnd), pointer(dp), sett.ext)
+        end
     end
 
     return f₁
@@ -326,16 +333,17 @@ function affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3
 
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
-       #print("J[",bnd,"]\n")
-        ccall(dlsym(pplib,:push_affine), Cvoid,
-              (Ref{Cfloat}, Ref{Cfloat},
-               Ref{Csize_t}, Csize_t,
-               Ref{Csize_t}, Ref{Cfloat},
-               Ref{Cint}, Ref{Csize_t}, Cint),
-              pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)),
-              pointer(d₀), n₁,
-              pointer(d₁), pointer(A),
-              pointer(bnd), pointer(dp), sett.ext)
+        GC.@preserve f₀ f₁ d₀ d₁ A bnd dp begin
+            ccall(dlsym(pplib,:push_affine), Cvoid,
+                  (Ref{Cfloat}, Ref{Cfloat},
+                   Ref{Csize_t}, Csize_t,
+                   Ref{Csize_t}, Ref{Cfloat},
+                   Ref{Cint}, Ref{Csize_t}, Cint),
+                  pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)),
+                  pointer(d₀), n₁,
+                  pointer(d₁), pointer(A),
+                  pointer(bnd), pointer(dp), sett.ext)
+        end
     end
     return f₀
 end
