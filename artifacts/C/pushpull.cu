@@ -227,8 +227,7 @@ __global__ void affine_push_element(float *f0, const float *f1)
     x[1] = Aff[1]*i + Aff[4]*j + Aff[7]*k + Aff[10];
     x[2] = Aff[2]*i + Aff[5]*j + Aff[8]*k + Aff[11];
 
-    if(VOXOK(x,d0))
-        push1(d0, f0, (float *)0, bnd, dp, x, fo);
+    if(VOXOK(x,d0)) push1(d0, f0, (float *)0, bnd, dp, x, fo);
 }
 
 

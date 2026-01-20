@@ -1,3 +1,9 @@
+#
+
+# Note that the use of `pointer()` is considered unsafe.
+# Behaviour appears to be dependent on the Julia releas used,
+# and will need to be dealt with properly later on.
+
 using Libdl
 
 """
@@ -34,10 +40,10 @@ function pull(f₀::Array{Float32}, ϕ::Array{Float32},
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
     d₀  = Csize_t.([size(f₀)[1:3]...])
     n₁  = Csize_t.(n₁)
+    bnd = zeros(Int32,3)
 
     f₁  = zeros(Float32, (d₁..., dv...))
 
-    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pull), Cvoid,
@@ -85,10 +91,10 @@ function pull_grad(f₀::Array{Float32}, ϕ::Array{Float32},
     ext = sett.ext
     d₀  = Csize_t.([size(f₀)[1:3]...])
     n₁  = Csize_t.(n₁)
+    bnd = zeros(Int32,3)
 
     ∇f  = zeros(Float32, (d₁..., 3, dv...))
 
-    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
         # void pull_grad(float *∇f, const float *ϕ, const float *f₀,
         #                const USIZE_t *d₀, const USIZE_t n₁, const int *bnd, const USIZE_t *dp, const int ext)
@@ -125,10 +131,10 @@ function pull_hess(f₀::Array{Float32}, ϕ::Array{Float32},
     ext = sett.ext
     d₀  = Csize_t.([size(f₀)[1:3]...])
     n₁  = Csize_t.(n₁)
+    bnd = zeros(Int32,3)
 
     h₁  = zeros(Float32, (d₁..., 3,3, dv...))
 
-    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pullh), Cvoid,
@@ -178,10 +184,10 @@ function push(f₁::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Integer},
     ext = sett.ext
     d₀  = Csize_t.([d₀...])
     n₁  = Csize_t.(n₁)
+    bnd = zeros(Int32,3)
 
     f₀  = zeros(Float32, (d₀..., dv...))
 
-    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:push), Cvoid,
@@ -232,10 +238,10 @@ function push_grad(∇f::Array{Float32}, ϕ::Array{Float32}, d₀::NTuple{3,Inte
     ext = sett.ext
     d₀  = Csize_t.([d₀...])
     n₁  = Csize_t.(n₁)
+    bnd = zeros(Int32,3)
 
     g₀  = zeros(Float32, (d₀..., dv...))
 
-    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pushg), Cvoid,
@@ -273,10 +279,10 @@ function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
     ext = sett.ext
+    bnd = zeros(Int32,3)
 
     f₁  = zeros(Float32, (d₁..., dv...))
 
-    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
         ccall(dlsym(pplib,:pull_affine), Cvoid,
@@ -314,12 +320,13 @@ function affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3
 
     dp  = Csize_t.([sett.deg...].+Csize_t(1))
     ext = sett.ext
+    bnd = zeros(Int32,3)
 
     f₀  = zeros(Float32, (d₀..., dv...))
 
-    bnd = zeros(Int32,3)
     for nb=1:Nb, nc=1:Nc
         bnd .= (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
+       #print("J[",bnd,"]\n")
         ccall(dlsym(pplib,:push_affine), Cvoid,
               (Ref{Cfloat}, Ref{Cfloat},
                Ref{Csize_t}, Csize_t,

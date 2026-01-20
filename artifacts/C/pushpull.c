@@ -216,6 +216,7 @@ void push_affine(float *f0,         const float *f1,
                  const int *bnd,    const USIZE_t *dp, const int ext)
 {
     int i,j,k, ijk;
+    /* printf("[%d,%d,%d]\n", (int)(bnd[0]), (int)(bnd[1]), (int)(bnd[2])); */
     for(k=0, ijk=0; k<d1[2]; k++)
     {
         for(j=0; j<d1[1]; j++)

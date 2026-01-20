@@ -4,7 +4,6 @@
 #define MIN(a,b) ((signed)(a)<(signed)(b) ? (a) : (b))
 #define MAX(a,b) ((signed)(a)>(signed)(b) ? (a) : (b))
 
-
 void blip_pad(const SSIZE_t i_start, const SSIZE_t i_stop,
               const SSIZE_t j_start, const SSIZE_t j_stop,
               const SSIZE_t k_start, const SSIZE_t k_stop,
@@ -56,7 +55,7 @@ void blip_nopad(const SSIZE_t i_start, const SSIZE_t i_stop,
 }
 
 
-void blip(float *u, const USIZE_t *d, const float *g,
+void blip_orig(float *u, const USIZE_t *d, const float *g,
           const float *aa, const float *bb, const float *ab,
           const float *s)
 {
@@ -78,6 +77,13 @@ void blip(float *u, const USIZE_t *d, const float *g,
     blip_pad(  i1,d[0], j0,  j1, k0,  k1, u, d, g, aa, bb, ab, s);
     blip_pad(   0,d[0], j1,d[1], k0,  k1, u, d, g, aa, bb, ab, s);
     blip_pad(   0,d[0],  0,d[1], k1,d[2], u, d, g, aa, bb, ab, s);
+}
+
+void blip(float *u, const USIZE_t *d, const float *g,
+          const float *aa, const float *bb, const float *ab,
+          const float *s)
+{
+    blip_pad(0,d[0], 0,d[1], 0,d[2], u, d, g, aa, bb, ab, s);
 }
 
 
