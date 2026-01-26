@@ -1,4 +1,5 @@
-VolType{N} = Union{CuArray{Float32,N}, Array{Float32,N}}
+#VolType{N} = Union{CuArray{Float32,N}, Array{Float32,N}}
+VolType{N} = AbstractArray{Float32,N}
 
 dim(v) = size(v)[1:3]
 
@@ -266,7 +267,7 @@ function invert_def(phi::T)::T where T<:VolType
         end
         return iphi
     else
-        Id   = id(d[1:3]; gpu=~isa(phi,Array))
+        Id   = id(phi)
         sett = Settings(1, [2 1 1;1 2 1;1 1 2], 0)
         g    = push(Id, phi, d[1:3], sett)
         o    = typeof(g)(undef,(d[1:3]...,1))

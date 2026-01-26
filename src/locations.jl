@@ -1,3 +1,8 @@
+using Libdl
+#using Artifacts
+using LazyArtifacts
+
+
 # Doesn't work with ptx files named according to MATLAB's conventions.
 """
    getext()
@@ -49,7 +54,6 @@ function ptxdir()
     return joinpath(basedir(), "ptx" * getext())
 end
 
-using LazyArtifacts
 
 function basedir()
     if true

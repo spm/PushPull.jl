@@ -78,22 +78,13 @@ end
 #    @printf("deg: %d,%d,%d\nbnd: %d,%d,%d\next: %d\n",Int32.(sett.deg)..., Int32.(sett.bnd)..., Int32(sett.ext))
 #end
 
-function id(v::AbstractArray{Float32,4})
-    return id(size(v)[1:3]; gpu=isa(v,CuArray))
-end
+function id(v::AbstractArray{Float32}; affine::Union{Nothing, Matrix{<:Real}} = nothing, dim=size(v)[1:3])
+    T   = Base.typename(typeof(v)).wrapper{Float32}
+    x   = T(1:dim[1])
+    y   = T(1:dim[2])'
+    z   = reshape(T(1:dim[3]),(1,1,dim[3]))
+    phi = T(undef,(dim...,3))
 
-function id(d1::NTuple{3,Integer}; gpu::Integer = false, affine::Matrix{<:Real} = [1. 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1])
-    if gpu==0
-        x   = Float32.(1:d1[1])
-        y   = Float32.(1:d1[2])'
-        z   = reshape(Float32.(1:d1[3]),(1,1,d1[3]))
-        phi = zeros(Float32,(d1...,3))
-    else
-        x   =         CuArray{Float32}(1:d1[1])              
-        y   = reshape(CuArray{Float32}(1:d1[2]), (1,d1[2],1))
-        z   = reshape(CuArray{Float32}(1:d1[3]), (1,1,d1[3]))
-        phi = CUDA.zeros(Float32,(d1...,3))
-    end
     if affine==nothing
         phi[:,:,:,1] .= x
         phi[:,:,:,2] .= y

@@ -1,6 +1,25 @@
-import FFTW: dct, dct!, idct, idct!, r2r!, RODFT10, RODFT01, REDFT10, REDFT01
-using CUDA
-using CUDA.CUFFT
+import FFTW: r2r!, RODFT10, RODFT01, REDFT10, REDFT01, fft!, ifft!
+
+# Attempt to use FFTW for Array
+import FFTW
+dct(x::Array{<:Number})     = FFTW.dct(x)
+dct!(x::Array{<:Number})    = FFTW.dct!(x)
+idct(x::Array{<:Number})    = FFTW.idct(x)
+idct!(x::Array{<:Number})   = FFTW.idct!(x)
+dct(x::Array{<:Number}, dims)   = FFTW.dct(x,dims)
+dct!(x::Array{<:Number}, dims)  = FFTW.dct!(x,dims)
+idct(x::Array{<:Number}, dims)  = FFTW.idct(x,dims)
+idct!(x::Array{<:Number}, dims) = FFTW.idct!(x,dims)
+
+
+function dct(X::AbstractArray{<:AbstractFloat}, dims=1:ndims(X))
+    return dct!(deepcopy(X), dims)
+end
+
+function idct(X::AbstractArray{<:AbstractFloat}, dims=1:ndims(X))
+    return idct!(deepcopy(X), dims)
+end
+
 
 scratch = []
 
@@ -13,6 +32,7 @@ TODO: Set up a complex scratch array for the CUDA dst/dct to work with
       to avoid additional memory allocations. Use a view of this memory
       for the faster (even dimension) dct.
 =#
+
 
 """
     dst(X [, dims])
@@ -37,15 +57,6 @@ function idst(X::AbstractArray{<:AbstractFloat}, dims=1:ndims(X))
 end
 
 
-function dct(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
-    return dct!(deepcopy(X), dims)
-end
-
-function idct(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
-    return idct!(deepcopy(X), dims)
-end
-
-
 """
     dst!(X [, dims])
 Same as dst, except that it operates in-place on X, which must be an array of real floating-point values.
@@ -59,18 +70,21 @@ function dst_scratch(d::NTuple{N, Integer}, dt::DataType) where {N}
     if ~@isdefined(_scratch_dst)
         _scratch_dst = []
     end
-    if dt<:CuArray
+    constructor = Base.typename(dt).wrapper
+    if dt==Array
+        _scratch_dst = []
+        return false
+    else
         if (length(_scratch_dst) == 2*prod(d)) && (eltype(_scratch_dst)==Complex{eltype(dt)})
             # Already defined
             return false
         else
             #print("Allocating ", 2*prod(d)/1024, " elements of ", eltype(dt), ".\n")
-            _scratch_dst = CUDA.zeros(Complex{eltype(dt)}, 2*prod(d))
+            #_scratch_dst = CUDA.zeros(Complex{eltype(dt)}, 2*prod(d))
+            _scratch_dst  = constructor{Complex{eltype(dt)}}(undef,2*prod(d))
+            _scratch_dst .= 0
             return true
         end
-    else
-        _scratch_dst = []
-        return false
     end
 end
 
@@ -93,11 +107,10 @@ function dst_scratch(do_clear::Bool=true)
 end
 
 # Slow GPU implementation
-function dst!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
+function dst!(X::AbstractArray{<:AbstractFloat}, dims=1:ndims(X))
     dims = [dims...]
     d  = size(X);
     r1 = [StepRange.(1,1,d)...]
-    T  = eltype(X)
     cl = dst_scratch(d, typeof(X))
     for i in dims
         X2,   = dst_scratch(d,i)
@@ -108,7 +121,7 @@ function dst!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
         X2[r1...] .= .-X
         r1[i] = 2:1:(di+1)
         fft!(X2,i)
-        w     = _dst_scale(T, d, i)
+        w     = _dst_scale(X, d, i)
         X    .= imag.(view(X2,r1...).*w)
         r1[i] = ri
     end
@@ -126,18 +139,17 @@ function idst!(X::Array{<:AbstractFloat},dims=1:ndims(X))
 end
 
 # Slow GPU implementation
-function idst!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
+function idst!(X::AbstractArray{<:AbstractFloat}, dims=1:ndims(X))
     dims = [dims...]
     d  = size(X);
     r1 = [StepRange.(1,1,d)...]
     r2 = deepcopy(r1)
-    T  = eltype(X)
     cl = dst_scratch(d, typeof(X))
     for i in dims
         X2,   = dst_scratch(d,i)
         if true
             ri    = r1[i]
-            w     = im ./ _dst_scale(T, d, i)
+            w     = im ./ _dst_scale(X, d, i)
             r2[i] = r2[i].+1
             X2[r2...] .= X.*w
             w     = reshape(conj.(w[1:(end-1)]), _along(length(d), i, d[i]-1))
@@ -157,13 +169,12 @@ function idst!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
 end
 
 # Slow GPU implementation
-function dct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
+function dct!(X::AbstractArray{<:AbstractFloat}, dims=1:ndims(X))
     dims = [dims...]
     d  = size(X);
     r1 = [StepRange.(1,1,d)...]
     r2 = deepcopy(r1)
 
-    T  = eltype(X)
     cl = dst_scratch(d, typeof(X))
 
     for i in dims
@@ -183,7 +194,7 @@ function dct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
                 r1[i] = r1i
                 r2[i] = r2i
                 fft!(X1, i)
-                w     = _dct_scale(T, d, i)
+                w     = _dct_scale(X, d, i)
                 w   .*= 2
                 X   .= real.(X1.*w)
             else
@@ -194,7 +205,7 @@ function dct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
                 X2[r1...] .= X
                 r1[i] = r1i
                 fft!(X2,i)
-                w     = _dct_scale(T, d, i)
+                w     = _dct_scale(X, d, i)
                 X .= real.(view(X2,r1...).*w)
             end
         end
@@ -205,13 +216,12 @@ end
 
 
 # Slow GPU implementation
-function idct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
+function idct!(X::AbstractArray{<:AbstractFloat}, dims=1:ndims(X))
     dims = [dims...]
     d  = size(X);
     r1 = [StepRange.(1,1,d)...]
     r2 = deepcopy(r1)
 
-    T  = eltype(X)
     cl = dst_scratch(d, typeof(X))
     for i in dims
         X2,X1 = dst_scratch(d, i)
@@ -219,7 +229,7 @@ function idct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
             if iseven(d[i])
                 # Even sized
                 ri    = r1[i]
-                w     = _dct_scale(T, d, i)
+                w     = _dct_scale(X, d, i)
                 w    .= 1 ./ w
                 w[1:1] ./= 2
                 X1 .= X.*w
@@ -234,7 +244,7 @@ function idct!(X::CuArray{<:AbstractFloat}, dims=1:ndims(X))
             else
                 # Odd sized
                 ri    = r1[i]
-                w     = _dct_scale(T, d, i)
+                w     = _dct_scale(X, d, i)
                 w    .= 1 ./ w
                 X2[r2...] .= X.*w
                 w     = reshape(conj.(w[2:end]), _along(length(d), i, d[i]-1))
@@ -302,20 +312,22 @@ end
 #end
 
 
-function _dct_scale(T, d, i)
+function _dct_scale(x, d, i)
+    T      = Base.typename(typeof(x)).wrapper{Complex{eltype(x)}}
     d1     = ones(Int64,length(d))
     d1[i]  = d[i]
-    w      = reshape(CuArray{Complex{T}}(0:(d[i]-1)) .*= -(im*pi/(2*d[i])), d1...)
+    w      = reshape(T(0:(d[i]-1)) .*= -(im*pi/(2*d[i])), d1...)
     w     .= exp.(w) ./ sqrt(2*d[i])
     w[1:1]./= sqrt(2)
     return w
 end
 
-function _dst_scale(T, d, i)
-    d1    = ones(Int64,length(d))
-    d1[i] = d[i]
-    w     = reshape(CuArray{Complex{T}}(1:(d[i])) .*= -(im*pi/(2*d[i])), d1...)
-    w    .= .-exp.(w) ./ sqrt(2*d[i])
+function _dst_scale(x, d, i)
+    T      = Base.typename(typeof(x)).wrapper{Complex{eltype(x)}}
+    d1     = ones(Int64,length(d))
+    d1[i]  = d[i]
+    w      = reshape(T(1:(d[i])) .*= -(im*pi/(2*d[i])), d1...)
+    w     .= .-exp.(w) ./ sqrt(2*d[i])
     return w
 end
 

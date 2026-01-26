@@ -1,7 +1,5 @@
-# Note that (on Windows at least) CuArray works better in Julia 1.5.3 than in Julia 1.7.2.
-
 using CUDA
-
+global ppmod
 
 """
     pull(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings)
@@ -18,7 +16,7 @@ Requirements
 """
 function pull(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
-    global cuPull
+    cuPull = CuFunction(ppmod, "_Z12pull_elementPfPKfS1_")
 
     @assert(ndims(f₀) >= 3 && ndims(f₀) <= 5, "`f₀` must have between 3 & 5 dimensions")
     @assert(ndims(ϕ)  >= 4 && ndims(ϕ)  <= 5, "`ϕ` must have 4 or 5 dimensions")
@@ -63,7 +61,7 @@ Requirements
 """
 function pull_grad(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
-    global cuPullGrad
+    cuPullGrad = CuFunction(ppmod, "_Z13pullg_elementPfPKfS1_")
 
     @assert(ndims(f₀) >= 3 && ndims(f₀) <= 5, "`f₀` must have between 3 & 5 dimensions")
     @assert(ndims(ϕ)  >= 4 && ndims(ϕ)  <= 5, "`ϕ` must have 4 or 5 dimensions")
@@ -106,7 +104,7 @@ Requirements
 """
 function pull_hess(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
-    global cuPullHess
+    cuPullHess = CuFunction(ppmod, "_Z13pullh_elementPfPKfS1_")
 
     @assert(ndims(f₀) >= 3 && ndims(f₀) <= 5, "`f₀` must have between 3 & 5 dimensions")
     @assert(ndims(ϕ)  >= 4 && ndims(ϕ)  <= 5, "`ϕ` must have 4 or 5 dimensions")
@@ -152,7 +150,7 @@ Requirements
 function push(f₁::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer},
               sett::Settings = Settings())::CuArray{Float32}
 
-    global cuPush
+    cuPush = CuFunction(ppmod, "_Z12push_elementPfPKfS1_")
 
     @assert(ndims(f₁) >= 3 && ndims(f₁) <= 5,   "`f₁` must have between 3 & 5 dimensions")
     @assert(ndims(ϕ)  >= 4 && ndims(ϕ)  <= 5,   "`ϕ` must have 4 or 5 dimensions")
@@ -200,7 +198,7 @@ Requirements
 function push_grad(∇f::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer},
                    sett::Settings = Settings())::CuArray{Float32}
 
-    global cuPushGrad
+    cuPushGrad = CuFunction(ppmod, "_Z13pushg_elementPfPKfS1_")
 
     @assert(ndims(∇f) >= 4 && ndims(∇f) <= 6,   "`∇f` must have between 4 & 6 dimensions")
     @assert(ndims(ϕ)  >= 4 && ndims(ϕ)  <= 5,   "`ϕ` must have 4 or 5 dimensions")
@@ -258,7 +256,7 @@ Work in progress
 function affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer},
                      sett::Settings = Settings())::CuArray{Float32}
 
-    global cuAffPull
+    cuAffPull = CuFunction(ppmod, "_Z19affine_pull_elementPfPKf")
 
     @assert((size(Aff,1)==3 || size(Aff,1)==4) && size(Aff,2)==4)
     A = Float32.(Aff[1:3,1:4])
@@ -299,7 +297,7 @@ Work in progress
 function affine_push(f₁::CuArray{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer},
                      sett::Settings = Settings())::CuArray{Float32}
 
-    global cuAffPush
+    cuAffPush  = CuFunction(ppmod, "_Z19affine_push_elementPfPKf")
 
     @assert((size(Aff,1)==3 || size(Aff,1)==4) && size(Aff,2)==4)
     A = Float32.(Aff[1:3,1:4])

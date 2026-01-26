@@ -1,4 +1,3 @@
-using FFTW
 
 """
 
@@ -118,7 +117,7 @@ Take the regularisation operator `L`, and (if necessary) reduce its
 dimensions so that it fits with a set of image dimensions `d`.
 
 """
-function reduce2fit(L::Union{Array{<:Real,4},CuArray{<:Real,4}}, d::NTuple{3,Integer},
+function reduce2fit(L::AbstractArray{<:Real,4}, d::NTuple{3,Integer},
                      bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
     dp = size(L)
     c  = Int32.((dp[1:3].+1)./2)
@@ -308,16 +307,17 @@ The elements that are returned are defined by `r`.
 #tim = ()->Dates.now().instant.periods.value
 
 function free!(x::AbstractArray)
-    if isa(x,CuArray)
-        CUDA.unsafe_free!(x)
-    end
+    #if isa(x,CuArray)
+    #    CUDA.unsafe_free!(x)
+    #end
+    x = []
     return nothing
 end
 
 
 """
 """
-function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integer})
+function greens(L::AbstractArray{Float32,4}, d::NTuple{3,Integer})
 
     function scratchlen(dl,d)
         # Could re-order the fft to reduce memory requirements
@@ -341,13 +341,16 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
     # TODO: Determine the actual maximum amount of memory required
     #sl = 2*prod(d.+1)+prod(d.+1)
     sl  = sum(scratchlen(size(L)[1:3],d))
-    if isa(L,CuArray)
-        K       = Array{CuArray{Float32,3}}(undef, dl[4])
-        scratch = CUDA.zeros(ComplexF32,sl)
-    else
-        K       = Array{  Array{Float32,3}}(undef, dl[4])
-        scratch = zeros(ComplexF32,sl)
-    end
+    K   = Array{AbstractArray{Float32,3}}(undef, dl[4])
+    scratch = similar(L, ComplexF32, sl)
+    scratch .= 0
+    #if isa(L,CuArray)
+    #    K       = Array{CuArray{Float32,3}}(undef, dl[4])
+    #    scratch = CUDA.zeros(ComplexF32,sl)
+    #else
+    #    K       = Array{  Array{Float32,3}}(undef, dl[4])
+    #    scratch = zeros(ComplexF32,sl)
+    #end
 
     function padft(L::Union{AbstractArray{Float32,3},AbstractArray{Complex{Float32},3}},
                    d::NTuple{3,Integer}, r::NTuple{3,UnitRange}=UnitRange.(1,d.+1))
@@ -401,15 +404,16 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
             K[i] .^= (-1)
             r[i]   = ri
             if ~all(isfinite.(Array(view(K[i],1:1))))
-                CUDA.@allowscalar K[i][1:1] .= 0.0f0
+                K[i][1:1] .= 0.0f0
             end
         end
     else
-        if isa(L,CuArray)
-            F = Array{CuArray{Float32,3}}(undef, dl[4])
-        else
-            F = Array{  Array{Float32,3}}(undef, dl[4])
-        end
+       #if isa(L,CuArray)
+       #    F = Array{CuArray{Float32,3}}(undef, dl[4])
+       #else
+       #    F = Array{  Array{Float32,3}}(undef, dl[4])
+       #end
+        F = Array{AbstractArray{Float32,3}}(undef, dl[4])
         r0   = UnitRange.(1,d[1:3].+1)
         for i=1:dl[4]
             F[i] = padft(view(L, :,:,:,i), d, r0)
@@ -427,7 +431,7 @@ function greens(L::Union{CuArray{Float32,4},Array{Float32,4}}, d::NTuple{3,Integ
         dF  .= F[1].*(F[2].*F[3] .- F[6].^2) .+ F[4].*(2 .*F[5].*F[6] .- F[3].*F[4]) .- F[2].*F[5].^2
         dF .^= -1
         if ~all(isfinite.(Array(view(dF,1:1))))
-            CUDA.@allowscalar dF[1:1] .= 0.0f0
+            dF[1:1] .= 0.0f0
         end
 
         # "diagonal" components
@@ -483,7 +487,8 @@ function mom2vel(u::AbstractArray{Float32,4}, K::Vector{<:AbstractArray{Float32,
         t          .=  dct!( dst!(u[:,:,:,3], 3), (1,2))
         v[:,:,:,3] .= idct!(idst!(t .*= K[3], 3), (1,2))
     else
-        U    = isa(u,CuArray) ? Array{CuArray{Float32,3}}(undef, 3) : Array{  Array{Float32,3}}(undef, 3)
+       #U    = isa(u,CuArray) ? Array{CuArray{Float32,3}}(undef, 3) : Array{  Array{Float32,3}}(undef, 3)
+        U    = Array{AbstractArray{Float32,3}}(undef, 3)
         U[1] = dct!( dst!(u[:,:,:,1],1), (2,3)) # Memory allocation (1 × volume)
         U[2] = dct!( dst!(u[:,:,:,2],2), (1,3)) # Memory allocation (1 × volume)
         U[3] = dct!( dst!(u[:,:,:,3],3), (1,2)) # Memory allocation (1 × volume)
