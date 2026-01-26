@@ -146,7 +146,7 @@ end
     f1    = randn(Float32,(d...,c))
     f2    = randn(Float32,(d...,c))
     phi   = randn(Float32,(d...,3))
-    phi .+= PushPull.id(d; gpu=false)
+    phi .+= PushPull.id(phi)
     d   = (8,7,1)
     @test operator_consistency(d,[1e-3, 0.,0.,0.], false) < tol
     @test operator_consistency(d,[1e-3, 1.,0.,0.], false) < tol
@@ -157,7 +157,7 @@ end
     f1    = randn(Float32,(d...,c))
     f2    = randn(Float32,(d...,c))
     phi   = randn(Float32,(d...,3))
-    phi .+= PushPull.id(d; gpu=false)
+    phi .+= PushPull.id(phi)
 
     d   = (32,31,30)
     @test operator_consistency(d,[1e-3, 0.,0.,0.], false) < tol
@@ -181,7 +181,7 @@ end
     f1    = randn(Float32,(d...,c))
     f2    = randn(Float32,(d...,c))
     phi   = randn(Float32,(d...,3))
-    phi .+= PushPull.id(d; gpu=false)
+    phi .+= PushPull.id(phi)
     sett  = PushPull.Settings((3,3,3),(0,1,2),1)
 
     # Testing CPU
@@ -244,7 +244,7 @@ end
     f1    = randn(Float32,(d...,c,bs))
     f2    = randn(Float32,(d...,c,bs))
     phi   = randn(Float32,(d...,3,bs))
-    phi .+= PushPull.id(d; gpu=false)
+    phi .+= PushPull.id(phi)
 
     # CPU
     sett  = PushPull.Settings((3,3,3),(0,1,2),1)
