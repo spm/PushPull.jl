@@ -11,7 +11,7 @@ include("operator_sparse.jl")
 include("multigrid.jl")
 include("denoise3d_cpu.jl")
 
-if true
+if false
     print("\n ### Using CUDA ### \n")
     using CUDA.CUFFT
     include("pushpull_gpu.jl")
