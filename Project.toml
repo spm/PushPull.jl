@@ -11,6 +11,9 @@ LazyArtifacts = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
+[compat]
+Artifacts = "1"
+
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
