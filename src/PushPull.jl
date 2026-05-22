@@ -11,16 +11,9 @@ include("operator_sparse.jl")
 include("multigrid.jl")
 include("denoise3d_cpu.jl")
 
-if false
-    print("\n ### Using CUDA ### \n")
-    using CUDA.CUFFT
-    include("pushpull_gpu.jl")
-    include("operator_sparse_gpu.jl")
-    include("lbessi_gpu.jl")
-    include("denoise3d_gpu.jl")
-    include("init_gpu.jl")
-else
-    init_cuda() = nothing
+function lbessi(nu::Real, z::AbstractArray{Float32})
+    error("`lbessi` is not ready for CPU!\n");
+    return nothing
 end
 
 export pull, push, pull_grad, show, affine_pull, affine_push, id, Settings

@@ -1,5 +1,4 @@
 using CUDA
-global opmod
 
 const KernelType = NamedTuple{(:stride, :d, :nchan, :offset, :length, :values, :indices, :patch_indices),
                               Tuple{NTuple{3, Int64}, NTuple{3, Int64}, Int64, Matrix{Int32}, Matrix{Int32},
@@ -23,8 +22,7 @@ function setkernel(kernel::KernelType, bnd)
     __constant__ USIZE_t  o[3];                   /* offsets into volume */
     __constant__ USIZE_t  n[3];                   /* number of elements */
 =#
-    global opmod
-
+    opmod    = getopmod()
     maxn     = 8
     maxd     = 5
     max_elem = 256
@@ -56,11 +54,12 @@ function setkernel(kernel::KernelType, bnd)
 end
 
 
-function vel2mom!(u::CuArray{Float32,4},
+function PushPull.vel2mom!(u::CuArray{Float32,4},
                   v::CuArray{Float32,4},
                   kernel::KernelType,
                   bnd::Array{<:Integer} = Int32.([2 1 1; 1 2 1; 1 1 2]))
 
+    opmod = getopmod()
     function run_kernel(fun, threads, r, u, v)
         # Computations using zero-offset
         o  = UInt64.(first.(r))
@@ -83,7 +82,6 @@ function vel2mom!(u::CuArray{Float32,4},
     @assert(all(size(u)  .== size(v)))
     @assert(all(kernel.d .== size(v)[1:3]))
 
-    global opmod
     cuVel2mom    = CuFunction(opmod, "_Z15vel2mom_elementPfPKf")
     cuVel2momPad = CuFunction(opmod, "_Z22vel2mom_padded_elementPfPKf")
 
@@ -131,16 +129,15 @@ function vel2mom!(u::CuArray{Float32,4},
 end
 
 
-function relax!(g::CuArray{Float32,4}, h::CuArray{Float32,4}, kernel::KernelType,
+function PushPull.relax!(g::CuArray{Float32,4}, h::CuArray{Float32,4}, kernel::KernelType,
                 bnd::Array{<:Integer}, nit::Integer, v::CuArray{Float32,4})
 
+    opmod = getopmod()
     function relax_block!(v::CuArray{Float32,4},
                           g::CuArray{Float32,4},
                           h::CuArray{Float32,4},
                           fun::CuFunction, r,
                           threads0=0)
-        global opmod
-
         if threads0==0
             config   = launch_configuration(fun)
             threads0 = config.threads
@@ -166,7 +163,6 @@ function relax!(g::CuArray{Float32,4}, h::CuArray{Float32,4}, kernel::KernelType
         return v
     end
 
-    global opmod
     cuRelax      = CuFunction(opmod, "_Z13relax_elementPfPKfS1_")
     cuRelaxPad   = CuFunction(opmod, "_Z20relax_padded_elementPfPKfS1_")
 
@@ -206,5 +202,9 @@ function relax!(g::CuArray{Float32,4}, h::CuArray{Float32,4}, kernel::KernelType
     end
 
     return v
+end
+
+function getopmod()
+    opmod = CuModuleFile(joinpath(PushPull.ptxdir(), "sparse_operator.ptx"))
 end
 

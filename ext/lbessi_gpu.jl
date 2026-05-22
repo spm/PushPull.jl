@@ -7,8 +7,8 @@ using CUDA
 Compute `log.(besseli.(nu,z))` on GPU.
 
 """
-function lbessi(nu::Real, z::CuArray{Float32})::CuArray{Float32}
-    mod     = CuModuleFile(joinpath(ptxdir(), "lbessi.ptx"));
+function PushPull.lbessi(nu::Real, z::CuArray{Float32})::CuArray{Float32}
+    mod     = CuModuleFile(joinpath(PushPull.ptxdir(), "lbessi.ptx"));
     fun     = CuFunction(mod, "_Z14lbessi_elementPffPKfy")
 
     threads = launch_configuration(fun; max_threads=length(z)).threads

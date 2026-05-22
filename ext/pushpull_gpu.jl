@@ -1,5 +1,3 @@
-using CUDA
-global ppmod
 
 """
     pull(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings)
@@ -14,8 +12,9 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function pull(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
+function PushPull.pull(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
+    ppmod  = getppmod()
     cuPull = CuFunction(ppmod, "_Z12pull_elementPfPKfS1_")
 
     @assert(ndims(f₀) >= 3 && ndims(f₀) <= 5, "`f₀` must have between 3 & 5 dimensions")
@@ -59,8 +58,9 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function pull_grad(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
+function PushPull.pull_grad(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
+    ppmod = getppmod()
     cuPullGrad = CuFunction(ppmod, "_Z13pullg_elementPfPKfS1_")
 
     @assert(ndims(f₀) >= 3 && ndims(f₀) <= 5, "`f₀` must have between 3 & 5 dimensions")
@@ -102,8 +102,9 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function pull_hess(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
+function PushPull.pull_hess(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings = Settings())::CuArray{Float32}
 
+    ppmod      = getppmod()
     cuPullHess = CuFunction(ppmod, "_Z13pullh_elementPfPKfS1_")
 
     @assert(ndims(f₀) >= 3 && ndims(f₀) <= 5, "`f₀` must have between 3 & 5 dimensions")
@@ -147,9 +148,10 @@ Requirements
 * `ϕ` & `f₀` must have the same batch size
 
 """
-function push(f₁::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer},
+function PushPull.push(f₁::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer},
               sett::Settings = Settings())::CuArray{Float32}
 
+    ppmod  = getppmod()
     cuPush = CuFunction(ppmod, "_Z12push_elementPfPKfS1_")
 
     @assert(ndims(f₁) >= 3 && ndims(f₁) <= 5,   "`f₁` must have between 3 & 5 dimensions")
@@ -195,9 +197,10 @@ Requirements
 * `∇f` and `ϕ` must have the same volume dimensions
 
 """
-function push_grad(∇f::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer},
+function PushPull.push_grad(∇f::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTuple{3,Integer},
                    sett::Settings = Settings())::CuArray{Float32}
 
+    ppmod      = getppmod()
     cuPushGrad = CuFunction(ppmod, "_Z13pushg_elementPfPKfS1_")
 
     @assert(ndims(∇f) >= 4 && ndims(∇f) <= 6,   "`∇f` must have between 4 & 6 dimensions")
@@ -237,10 +240,10 @@ Put interpolation settings into global variables on GPU.
 
 """
 function gpusettings(d₀, n₁, sett::Settings)
-    global ppmod
+    ppmod = getppmod()
     setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"dp"),  Csize_t.(sett.deg).+Csize_t(1))
-   #setindex!(CuGlobal{NTuple{3, Int32}}(ppmod,"bnd"), sett.bnd)
-    setindex!(CuGlobal{Int32}(ppmod,"ext"),            sett.ext)
+    setindex!(CuGlobal{NTuple{3, Int32}}(ppmod,"bnd"),  sett.bnd[1]) # Might need much more work
+    setindex!(CuGlobal{Int32}(ppmod,"ext"),             sett.ext)
 
     setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"d0"),  Csize_t.(d₀[1:3]))
     setindex!(CuGlobal{Csize_t}(ppmod,"n1"),            Csize_t(n₁))
@@ -253,9 +256,10 @@ affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Intege
 Work in progress
 
 """
-function affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer},
+function PushPull.affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer},
                      sett::Settings = Settings())::CuArray{Float32}
 
+    ppmod     = getppmod()
     cuAffPull = CuFunction(ppmod, "_Z19affine_pull_elementPfPKf")
 
     @assert((size(Aff,1)==3 || size(Aff,1)==4) && size(Aff,2)==4)
@@ -294,9 +298,10 @@ affine_push(f₁::CuArray{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Intege
 Work in progress
 
 """
-function affine_push(f₁::CuArray{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer},
+function PushPull.affine_push(f₁::CuArray{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer},
                      sett::Settings = Settings())::CuArray{Float32}
 
+    ppmod      = getppmod()
     cuAffPush  = CuFunction(ppmod, "_Z19affine_push_elementPfPKf")
 
     @assert((size(Aff,1)==3 || size(Aff,1)==4) && size(Aff,2)==4)
@@ -329,7 +334,7 @@ end
 
 
 function gpusettings_aff(d₁,Aff)
-    global ppmod
+    ppmod = getppmod()
     setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"d1"),  Csize_t.(d₁))
     Aff = Aff[1:3,:]                    # Assume Aff[4,:]==[0 0 0 1]
     Aff[:,4] .= sum(Aff,dims=2) .- 1.0  # Adjust for 0-offset (CUDA code)
@@ -339,7 +344,7 @@ function gpusettings_aff(d₁,Aff)
 end
 
 function setbound(nc::Integer, sett::Settings)
-    global ppmod
+    ppmod = getppmod()
     bnd = (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
     setindex!(CuGlobal{NTuple{3, Int32}}(ppmod,"bnd"), bnd)
 end
@@ -349,5 +354,9 @@ function threadblocks(fun,n)
     threads = config.threads
     blocks  = Int32(ceil(n./threads))
     return threads, blocks
+end
+
+function getppmod()
+    ppmod = CuModuleFile(joinpath(PushPull.ptxdir(), "pushpull.ptx"))
 end
 

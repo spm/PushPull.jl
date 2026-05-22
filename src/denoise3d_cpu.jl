@@ -13,32 +13,35 @@ function TVdenoise!(x::Union{Array{Float32,3},Array{Float32,4}}, y::Union{Array{
     @assert(size(x)==size(y), "incompatible sizes of input and output")
     d    = UInt64.([size(x)..., 1, 1]) # Gradient dimensions
     @assert(prod(d[5:length(d)])==1,"too many dimensions")
-    d    = (d[1:4]...,)
+   #d    = (d[1:4]...,)
+    d    = d[1:4]
     @assert(d[4]<=nlam, "too many volumes")
 
+    vox = [vox...,]
+
     if isa(lambdap,Real)
-        lambdap = Float32(lambdap).*(ones(Float32,nlam)...,)
+        lambdap = Float32(lambdap).*ones(Float32,nlam)
     elseif isa(Lambda,Array) || isa(Lambda,NTuple)
         if length(Lambda)~=d[4]
             error("incompatible size of lambdap")
         end
-        lambdap = (Float32.(lambdap)..., zeros(Float32,nlam-length(lambdap))...)
+        lambdap = [Float32.(lambdap)..., zeros(Float32,nlam-length(lambdap))...]
     elseif numel(lambdap)==1
         error("wrong type of lambdap")
     end
 
     if isa(lambdal,Real)
-        lambdal = Float32(lambdal).*(ones(Float32,nlam)...,)
+        lambdal = Float32(lambdal).*ones(Float32,nlam)
     elseif isa(Lambda,Array) || isa(Lambda,NTuple)
         if length(Lambda)~=d[4]
             error("incompatible size of lambdal")
         end
-        lambdal = (Float32.(lambdal)..., zeros(Float32,nlam-length(lambdal))...)
+        lambdal = [Float32.(lambdal)..., zeros(Float32,nlam-length(lambdal))...]
     elseif numel(lambdal)==1
         error("wrong type of lambdal")
     end
 
-    d1      = UInt64.(ceil.(d[1:3].-2)./2)
+    d1      = UInt64.(ceil.((d[1:3].-2)./2))
 
     for it=1:nit
         for ok=0:2

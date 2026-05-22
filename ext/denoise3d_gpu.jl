@@ -3,10 +3,7 @@ using CUDA
 import Base.cumprod
 cumprod(d::Tuple)=(cumprod([d...,])...,)
 
-global tvmod
-
-
-function TVdenoise(x::Union{CuArray{Float32,3},CuArray{Float32,4}}, nit::Integer=1,
+function PushPull.TVdenoise(x::Union{CuArray{Float32,3},CuArray{Float32,4}}, nit::Integer=1,
                    vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0), lambda::Union{Real,Array{Real}}=1.0f0)
     y = deepcopy(x)
     y = TVdenoise!(x,y,nit,vox,lambda)
@@ -19,7 +16,7 @@ function TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}},
                     nit::Integer, vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0),
                     lambdap::Union{Real,Array{Real}}=1.0f0, lambdal::Union{Real,Array{Real}}=1.0f0)
 
-    global tvmod
+    tvmod  = CuModuleFile(joinpath(PushPull.ptxdir(), "TVdenoise3d.ptx"))
     cutv3d = CuFunction(tvmod, "_Z11TVdenoise3dPfPKf")
     nlam = 20 # A constant from the .cu
 
@@ -51,7 +48,7 @@ function TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}},
         error("wrong type of lambdal")
     end
 
-    d1      = UInt64.(ceil.(d[1:3].-2)./2)
+    d1      = UInt64.(ceil.((d[1:3].-2)./2))
     threads, blocks = getthreads(d1, cutv3d)
 
     setindex!(CuGlobal{NTuple{   4, UInt64}}(tvmod,"d"),        UInt64.(d))
@@ -80,7 +77,8 @@ function getthreads(d::CuDim, fun::CuFunction, shmem::Integer=0, dev::CuDevice=C
     # Additional complications because this code uses 3D threads and blocks
     # rather than the much simpler 1D implementation
 
-    config = launch_configuration(fun; shmem=shmem, max_threads=prod(d))
+    # Needs max_threads to be signed integer (so that clamp(max_threads,Cint) works)
+    config = launch_configuration(fun; shmem=shmem, max_threads=Int64(prod(d)))
     nmax   = config.threads
 
     if isa(d,Integer)
