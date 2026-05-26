@@ -85,7 +85,7 @@ for it=1:8
 end
 end
 
-if false
+if true
 print("\nRelax\n")
 HLc = pp.hessian_pyramid(H,vx,reg)
 vc = zero(g)

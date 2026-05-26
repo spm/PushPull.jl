@@ -3,15 +3,15 @@ using CUDA
 import Base.cumprod
 cumprod(d::Tuple)=(cumprod([d...,])...,)
 
-function PushPull.TVdenoise(x::Union{CuArray{Float32,3},CuArray{Float32,4}}, nit::Integer=1,
-                   vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0), lambda::Union{Real,Array{Real}}=1.0f0)
-    y = deepcopy(x)
-    y = TVdenoise!(x,y,nit,vox,lambda)
-    return y
-end
+#function PushPull.TVdenoise(x::Union{CuArray{Float32,3},CuArray{Float32,4}}, nit::Integer=1,
+#                   vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0), lambda::Union{Real,Array{Real}}=1.0f0)
+#    y = deepcopy(x)
+#    y = TVdenoise!(x,y,nit,vox,lambda)
+#    return y
+#end
 
 
-function TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}},
+function PushPull.TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}},
                     y::Union{CuArray{Float32,3},CuArray{Float32,4}},
                     nit::Integer, vox::NTuple{3,Real}=(1.0f0,1.0f0,1.0f0),
                     lambdap::Union{Real,Array{Real}}=1.0f0, lambdal::Union{Real,Array{Real}}=1.0f0)
@@ -57,9 +57,9 @@ function TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}},
     setindex!(CuGlobal{NTuple{nlam, Float32}}(tvmod,"lambdal"), Float32.(lambdal))
     gl_o = CuGlobal{NTuple{3,UInt64}}(tvmod,"o")
     for it=1:nit
-        for ok=0:2
-            for oj=0:2
-                for oi=0:2
+        for ok=0:1
+            for oj=0:1
+                for oi=0:1
                     setindex!(gl_o, UInt64.((oi,oj,ok)))
                     cudacall(cutv3d, (CuPtr{Cfloat},CuPtr{Cfloat}),
                              pointer(y), pointer(x);
@@ -89,15 +89,15 @@ function getthreads(d::CuDim, fun::CuFunction, shmem::Integer=0, dev::CuDevice=C
         s = ones(Int64,length(d))
         c = cumprod(d)
         if c[1]>nmax
-            s[1] = min(nmax, attribute(dev,CUDA.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X))
+            s[1] = min(nmax, attribute(dev,CUDA.DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X))
         else
             s[1] = d[1]
             if c[2]>nmax
-                s[2] = min(floor(nmax/c[1]), attribute(dev,CUDA.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y))
+                s[2] = min(floor(nmax/c[1]), attribute(dev,CUDA.DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y))
             else
                 s[2] = d[2]
                 if c[3]>nmax
-                    s[3] = min(floor(Int64,nmax/c[2]), attribute(dev,CUDA.CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z))
+                    s[3] = min(floor(Int64,nmax/c[2]), attribute(dev,CUDA.DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z))
                 else
                     s[3] = d[3]
                 end

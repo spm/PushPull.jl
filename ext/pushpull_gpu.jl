@@ -29,18 +29,23 @@ function PushPull.pull(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Setti
     n₀  = prod(size(f₀)[1:3]) # Original volume dimensions
     d₁  = size(ϕ)[1:3]        # Output volume dimensions
     n₁  = prod(d₁)            # Number of voxels in output volume
-
-    gpusettings(size(f₀)[1:3], n₁, sett)
-
     f₁  = CUDA.zeros(Float32, (d₁..., dv...))
 
     threads,blocks = threadblocks(cuPull,n₁)
-    for nb=1:Nb, nc=1:Nc
-        setbound(nc, sett)
-        cudacall(cuPull, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
-                 pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1)),
-                 pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1));
-                 threads=threads, blocks=blocks)
+    gpusettings(ppmod, size(f₀)[1:3], n₁, sett)
+
+    for nc=1:Nc
+        setbound(ppmod, nc, sett)
+        for nb=1:Nb
+            GC.@preserve f₁ ϕ f₀ begin
+                pf₁ = pointer(f₁,1 +  n₁*(Nc*(nb-1) + nc-1))
+                pϕ  = pointer(ϕ, 1 + 3n₁*(nb-1))
+                pf₀ = pointer(f₀,1 +  n₀*(Nc*(nb-1) + nc-1))
+                cudacall(cuPull, (CuPtr{Cfloat}, CuPtr{Cfloat}, CuPtr{Cfloat}),
+                         pf₁, pϕ, pf₀;
+                         threads=threads, blocks=blocks)
+            end
+        end
     end
     return f₁
 end
@@ -76,19 +81,25 @@ function PushPull.pull_grad(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::
     d₁  = size(ϕ)[1:3]        # Output volume dimensions
     n₁  = prod(d₁)            # Number of voxels in output volume
 
-    gpusettings(size(f₀)[1:3], n₁, sett)
+    gpusettings(ppmod, size(f₀)[1:3], n₁, sett)
 
     ∇f  = CUDA.zeros(Float32, (d₁..., 3, dv...))
 
     threads,blocks = threadblocks(cuPullGrad,n₁)
-    for nb=1:Nb, nc=1:Nc
-        setbound(nc, sett)
-        cudacall(cuPullGrad, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
-                 pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1));
-                 threads=threads, blocks=blocks)
+    for nc=1:Nc
+        setbound(ppmod, nc, sett)
+        for nb=1:Nb
+            GC.@preserve ∇f ϕ f₀ begin
+                cudacall(cuPullGrad, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
+                         pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)),
+                         pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1));
+                         threads=threads, blocks=blocks)
+            end
+        end
     end
     return ∇f
 end
+
 
 """
     pull_hess(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::Settings)
@@ -120,16 +131,21 @@ function PushPull.pull_hess(f₀::CuArray{Float32}, ϕ::CuArray{Float32}, sett::
     d₁  = size(ϕ)[1:3]        # Output volume dimensions
     n₁  = prod(d₁)            # Number of voxels in output volume
 
-    gpusettings(size(f₀)[1:3], n₁, sett)
+    gpusettings(ppmod, size(f₀)[1:3], n₁, sett)
 
     h₁  = CUDA.zeros(Float32, (d₁..., 3,3, dv...))
 
     threads,blocks = threadblocks(cuPullHess,n₁)
-    for nb=1:Nb, nc=1:Nc
-        setbound(nc, sett)
-        cudacall(cuPullHess, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
-                 pointer(h₁, 1 + 9n₁*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1));
-                 threads=threads, blocks=blocks)
+    for nc=1:Nc
+        setbound(ppmod, nc, sett)
+        for nb=1:Nb
+            GC.@preserve h₁ ϕ f₀ begin
+                cudacall(cuPullHess, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
+                         pointer(h₁, 1 + 9n₁*(Nc*(nb-1) + nc-1)),
+                         pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1));
+                         threads=threads, blocks=blocks)
+            end
+        end
     end
     return h₁
 end
@@ -168,16 +184,21 @@ function PushPull.push(f₁::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::NTupl
     d₁  = size(ϕ)[1:3]        # Input volume dimensions
     n₁  = prod(d₁)            # Number of voxels in input volume
 
-    gpusettings(d₀, n₁, sett)
+    gpusettings(ppmod, d₀, n₁, sett)
 
     f₀  = CUDA.zeros(Float32, (d₀..., dv...))
 
     threads,blocks = threadblocks(cuPush,n₁)
-    for nb=1:Nb, nc=1:Nc
-        setbound(nc, sett)
-        cudacall(cuPush, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
-                 pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1));
-                 threads=threads, blocks=blocks)
+    for nc=1:Nc
+        setbound(ppmod, nc, sett)
+        for nb=1:Nb
+            GC.@preserve f₀ ϕ f₁ begin
+                cudacall(cuPush, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
+                         pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
+                         pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1));
+                         threads=threads, blocks=blocks)
+            end
+        end
     end
     return f₀
 end
@@ -218,16 +239,21 @@ function PushPull.push_grad(∇f::CuArray{Float32}, ϕ::CuArray{Float32}, d₀::
     d₁  = size(ϕ)[1:3]        # Input volume dimensions
     n₁  = prod(d₁)            # Number of voxels in input volume
 
-    gpusettings(d₀, n₁, sett)
+    gpusettings(ppmod, d₀, n₁, sett)
 
     g₀  = CUDA.zeros(Float32, (d₀..., dv...))
 
     threads,blocks = threadblocks(cuPushGrad,n₁)
-    for nb=1:Nb, nc=1:Nc
-        setbound(nc, sett)
-        cudacall(cuPushGrad, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
-                 pointer(g₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1));
-                 threads=threads, blocks=blocks)
+    for nc=1:Nc
+        setbound(ppmod, nc, sett)
+        for nb=1:Nb
+            GC.@preserve g₀ ϕ ∇f begin
+                cudacall(cuPushGrad, (CuPtr{Cfloat},CuPtr{Cfloat},CuPtr{Cfloat}),
+                         pointer(g₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
+                         pointer(ϕ, 1 + 3n₁*(nb-1)), pointer(∇f, 1 + 3n₁*(Nc*(nb-1) + nc-1));
+                         threads=threads, blocks=blocks)
+            end
+        end
     end
     return g₀
 end
@@ -239,16 +265,14 @@ end
 Put interpolation settings into global variables on GPU.
 
 """
-function gpusettings(d₀, n₁, sett::Settings)
-    ppmod = getppmod()
+function gpusettings(ppmod, d₀, n₁, sett::Settings)
     setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"dp"),  Csize_t.(sett.deg).+Csize_t(1))
-    setindex!(CuGlobal{NTuple{3, Int32}}(ppmod,"bnd"),  sett.bnd[1]) # Might need much more work
-    setindex!(CuGlobal{Int32}(ppmod,"ext"),             sett.ext)
-
+    setindex!(CuGlobal{Int32}(ppmod,"ext"),             Int32.(sett.ext))
     setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"d0"),  Csize_t.(d₀[1:3]))
     setindex!(CuGlobal{Csize_t}(ppmod,"n1"),            Csize_t(n₁))
     nothing
 end
+
 
 """
 affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer}, sett::Settings = Settings())
@@ -277,17 +301,22 @@ function PushPull.affine_pull(f₀::CuArray{Float32}, Aff::Array{Float32,2}, d�
     d₁  = Csize_t.(d₁)
     n₁  = prod(d₁)            # Number of voxels in output volume
 
-    gpusettings(d₀, n₁, sett)
-    gpusettings_aff(d₁, A)
+    gpusettings(ppmod, d₀, n₁, sett)
+    gpusettings_aff(ppmod, d₁, A)
 
     f₁  = CUDA.zeros(Float32, (d₁..., dv...))
 
     threads,blocks = threadblocks(cuAffPull,n₁)
-    for nb=1:Nb, nc=1:Nc
-        setbound(nc, sett)
-        cudacall(cuAffPull, (CuPtr{Cfloat}, CuPtr{Cfloat}),
-                 pointer(f₁,1 + n₁*(Nc*(nb-1) + nc-1)), pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1));
-                 threads=threads, blocks=blocks)
+    for nc=1:Nc
+        setbound(ppmod, nc, sett)
+        for nb=1:Nb
+            GC.@preserve f₁ f₀ begin
+                cudacall(cuAffPull, (CuPtr{Cfloat}, CuPtr{Cfloat}),
+                         pointer(f₁,1 + n₁*(Nc*(nb-1) + nc-1)),
+                         pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1));
+                         threads=threads, blocks=blocks)
+            end
+        end
     end
     return f₁
 end
@@ -317,44 +346,50 @@ function PushPull.affine_push(f₁::CuArray{Float32}, Aff::Array{Float32,2}, d�
     d₁  = size(f₁)[1:3]       # Input volume dimensions
     n₁  = prod(d₁)            # Number of voxels in input volume
 
-    gpusettings(d₀, n₁, sett)
-    gpusettings_aff(d₁, A)
+    gpusettings(ppmod, d₀, n₁, sett)
+    gpusettings_aff(ppmod, d₁, A)
 
     f₀  = CUDA.zeros(Float32, (d₀..., dv...))
 
     threads,blocks = threadblocks(cuAffPush,n₁)
-    for nb=1:Nb, nc=1:Nc
-        setbound(nc, sett)
-        cudacall(cuAffPush, (CuPtr{Cfloat},CuPtr{Cfloat}),
-                 pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)), pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1));
-                 threads=threads, blocks=blocks)
+    for nc=1:Nc
+        setbound(ppmod, nc, sett)
+        for nb=1:Nb
+            GC.@preserve f₀ f₁ begin
+                cudacall(cuAffPush, (CuPtr{Cfloat},CuPtr{Cfloat}),
+                         pointer(f₀, 1 + n₀*(Nc*(nb-1) + nc-1)),
+                         pointer(f₁, 1 + n₁*(Nc*(nb-1) + nc-1));
+                         threads=threads, blocks=blocks)
+            end
+        end
     end
     return f₀
 end
 
 
-function gpusettings_aff(d₁,Aff)
-    ppmod = getppmod()
+function gpusettings_aff(ppmod, d₁,Aff)
     setindex!(CuGlobal{NTuple{3,Csize_t}}(ppmod,"d1"),  Csize_t.(d₁))
     Aff = Aff[1:3,:]                    # Assume Aff[4,:]==[0 0 0 1]
     Aff[:,4] .= sum(Aff,dims=2) .- 1.0  # Adjust for 0-offset (CUDA code)
     Aff = (Float32.(Aff)[:]...,)
-    setindex!(CuGlobal{NTuple{12,Float32}}(ppmod,"Aff"),  Aff)
+    setindex!(CuGlobal{NTuple{12,Float32}}(ppmod,"Aff"),  Float32.(Aff))
     nothing
 end
 
-function setbound(nc::Integer, sett::Settings)
-    ppmod = getppmod()
+
+function setbound(ppmod, nc::Integer, sett::Settings)
     bnd = (length(sett.bnd)==1 ? sett.bnd[1] : sett.bnd[nc])
-    setindex!(CuGlobal{NTuple{3, Int32}}(ppmod,"bnd"), bnd)
+    setindex!(CuGlobal{NTuple{3, Int32}}(ppmod,"bnd"), Int32.(bnd))
 end
 
+
 function threadblocks(fun,n)
-    config  = launch_configuration(fun; max_threads=n)
+    config  = launch_configuration(fun; max_threads=Int64(n))
     threads = config.threads
     blocks  = Int32(ceil(n./threads))
     return threads, blocks
 end
+
 
 function getppmod()
     ppmod = CuModuleFile(joinpath(PushPull.ptxdir(), "pushpull.ptx"))

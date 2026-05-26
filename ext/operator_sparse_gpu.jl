@@ -4,7 +4,7 @@ const KernelType = NamedTuple{(:stride, :d, :nchan, :offset, :length, :values, :
                               Tuple{NTuple{3, Int64}, NTuple{3, Int64}, Int64, Matrix{Int32}, Matrix{Int32},
                               Vector{Float32}, Vector{Int32}, Vector{Int32}}}
 
-function setkernel(kernel::KernelType, bnd)
+function setkernel(opmod, kernel::KernelType, bnd)
 #=
     #define MAX_ELEM 256
     #define MAXN 8
@@ -22,7 +22,6 @@ function setkernel(kernel::KernelType, bnd)
     __constant__ USIZE_t  o[3];                   /* offsets into volume */
     __constant__ USIZE_t  n[3];                   /* number of elements */
 =#
-    opmod    = getopmod()
     maxn     = 8
     maxd     = 5
     max_elem = 256
@@ -88,7 +87,7 @@ function PushPull.vel2mom!(u::CuArray{Float32,4},
     # Put some things in constant memory for speed
     setindex!(CuGlobal{NTuple{5,UInt64}}(opmod,"d"),  UInt64.((kernel.d...,3,3)))
     setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"dp"), UInt64.(kernel.stride))
-    setkernel(kernel,bnd)
+    setkernel(opmod,kernel,bnd)
 
     threads_pad   = launch_configuration(cuVel2momPad).threads
     threads_nopad = launch_configuration(cuVel2mom).threads
@@ -166,12 +165,12 @@ function PushPull.relax!(g::CuArray{Float32,4}, h::CuArray{Float32,4}, kernel::K
     cuRelax      = CuFunction(opmod, "_Z13relax_elementPfPKfS1_")
     cuRelaxPad   = CuFunction(opmod, "_Z20relax_padded_elementPfPKfS1_")
 
-    (d, dp) = checkdims(g,h,v,kernel,bnd)
+    (d, dp) = PushPull.checkdims(g,h,v,kernel,bnd)
 
     # Put some things in constant memory for speed
     setindex!(CuGlobal{NTuple{5,UInt64}}(opmod,"d"),  d)
     setindex!(CuGlobal{NTuple{3,UInt64}}(opmod,"dp"), dp)
-    setkernel(kernel,bnd)
+    setkernel(opmod,kernel,bnd)
 
     threads_pad   = launch_configuration(cuRelaxPad).threads
     threads_nopad = launch_configuration(cuRelax).threads
