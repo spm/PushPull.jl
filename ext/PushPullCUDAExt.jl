@@ -1,7 +1,7 @@
 module PushPullCUDAExt
 
 try
-    print("\n ### Using PushPullCUDAExt ### \n")
+    @info "Using PushPullCUDAExt"
     Base.require(Main, :CUDA)
     using CUDA
     using PushPull
