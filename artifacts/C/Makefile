@@ -26,6 +26,7 @@ clean:
 	$(DEL) $(PTXFILES) $(LIBFILES)
 
 %.$(SOSUF) : %.c
+	echo $PLATFORM
 	$(CC) -O3 -shared -fPIC -Wl,-$(SONAME),$@ -o $@ -lm $<
 
 %.ptx : %.cu
