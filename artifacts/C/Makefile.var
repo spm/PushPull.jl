@@ -4,7 +4,6 @@ SHELL        = /bin/sh
 MAKE         = make
 MOSUF        = o
 SOSUF        = so
-UNAME        = uname
 AR           = ar rcs
 COPY         = cp -f
 DEL          = rm -f
@@ -19,15 +18,14 @@ SONAME       = soname
 NVCC        ?= nvcc
 
 ifndef PLATFORM
-  PLATFORM   = $(shell $(UNAME))
+  PLATFORM   = $(shell uname)
   ifeq (Darwin,$(PLATFORM))
-    ifeq (arm64,$(shell $(GET_ARCH))) # Check for Apple Silicon
+    ifeq (arm64,$(shell uname -m)) # Check for Apple Silicon
       PLATFORM = arm64
     endif
   endif
 endif
 
-echo PLATFORM = $PLATFORM
 
 ##### Linux #####
 ifeq (Linux,$(PLATFORM))
