@@ -27,6 +27,7 @@ ifndef PLATFORM
   endif
 endif
 
+echo PLATFORM = $PLATFORM
 
 ##### Linux #####
 ifeq (Linux,$(PLATFORM))
