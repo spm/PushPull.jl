@@ -28,9 +28,9 @@ jobs:
 
       - name: Compile 
         run: |
-          make -C src distclean
-          make -C src
-          make -C src install
+          make -C artifacts/C clean
+          make -C artifacts/C
+          make -C artifacts/C install
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
