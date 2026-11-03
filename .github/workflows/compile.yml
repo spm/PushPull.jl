@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - '**/*.c'
-      - '**/*.h'
-      - '**/*.cu'
+      - './artifacts/C/*.c'
+      - './artifacts/C/*.h'
+      - './artifacts/C/*.cu'
 
 jobs:
   compile:
