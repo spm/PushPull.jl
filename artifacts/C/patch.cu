@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #ifndef MAXD
 #    define MAXD 5
 #endif

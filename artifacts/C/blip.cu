@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #define CUDA
 #include "cuheader.h"
 #include "blip_dev.cu"

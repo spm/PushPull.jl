@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #define USIZE_t unsigned long long /* Done because of problems in Windows */
 
 extern void  push(float *f0, const float *phi, const float *f1,

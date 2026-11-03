@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #include "cuheader.h"
 #define MAXVOL 20
 #include "TVdenoise3d_dev.cu"

@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #include "cuheader.h"
 #include "patch.cu"
 #include "chol.cu"

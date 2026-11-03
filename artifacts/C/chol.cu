@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 /* Cholesky decomposition
  * n  - dimension of matrix a
  * a  - an n \times n matrix

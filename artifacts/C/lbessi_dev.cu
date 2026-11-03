@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #include "cuheader.h"
 /* Code based on
    "On the use of the noncentral chi-square density function

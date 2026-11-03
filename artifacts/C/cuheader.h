@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #ifndef _CUHDR
 #    define _CUHDR
 #    include<stddef.h>

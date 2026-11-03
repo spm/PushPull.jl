@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #define MAXD 5
 #include "cuheader.h"
 #include "bspline.cu"

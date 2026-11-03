@@ -1,3 +1,8 @@
+/*
+ * John Ashburner
+ * Copyright (C) 2023 Department of Imaging Neuroscience, UCL
+ */
+
 #define SQUARE(x) (_t=(x), _t*_t)
 #define SMALL 1e-8f 
 
