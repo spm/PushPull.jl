@@ -20,6 +20,11 @@ NVCC        ?= nvcc
 
 ifndef PLATFORM
   PLATFORM   = $(shell $(UNAME))
+  ifeq (Darwin,$(PLATFORM))
+    ifeq (arm64,$(shell $(GET_ARCH))) # Check for Apple Silicon
+      PLATFORM = arm64
+    endif
+  endif
 endif
 
 
