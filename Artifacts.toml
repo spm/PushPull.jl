@@ -1,4 +1,4 @@
-[[pp_lib]]
+[pp_lib]
 git-tree-sha1 = "8afb0ad82b0404fedd317fe4e7e42b2b27ee1bf1"
 lazy = true
     [[pp_lib.download]]
