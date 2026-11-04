@@ -13,3 +13,5 @@ println("\nor run the following (in Unix):")
 artif = "../../Artifacts.toml"
 println("\ncp ", artif, " Artifacts.prev ; sed < Artifacts.prev '/git-tree-sha1/s/\"[0-9,a-f].*\"/\"", sha1,"\"/' | sed '/sha256/s/\"[0-9,a-f].*\"/\"",sha2,"\"/' > ", artif, "\n")
 
+#println("\ncp ", artif, " Artifacts.prev\nsed < Artifacts.prev '/git-tree-sha1/s/\"[0-9,a-f].*\"/\"", sha1,"\"/' | sed '/sha256/s/\"[0-9,a-f].*\"/\"",sha2,"\"/' | sed '/url/s/pp_lib_*[0-9,a-f]*/pp_lib_", sha2[1:8], "/' > ", artif, "\nmv ", filename, " ../pp_lib_", sha2[1:8], ".tar.gz\n")
+
