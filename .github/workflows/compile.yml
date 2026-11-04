@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - './artifacts/C/*.c'
-      - './artifacts/C/*.h'
-      - './artifacts/C/*.cu'
+      - 'artifacts/C/*.c'
+      - 'artifacts/C/*.h'
+      - 'artifacts/C/*.cu'
 
 jobs:
   compile:
@@ -28,11 +28,11 @@ jobs:
 
       - name: Delete old artifacts
         if: matrix.os != 'windows-latest'
-        run: rm ./artifacts/lib/*/*
+        run: rm artifacts/lib/*/*
 
       - name: Delete old artifacts on Windows
         if: matrix.os == 'windows-latest'
-        run: Get-ChildItem -Path .\artifacts\lib -Recurse -Include *.cu *.dll | Remove-Item -Force
+        run: Get-ChildItem -Path .\artifacts\lib -Recurse -Include *.ptx *.dll *.so *.dylib | Remove-Item -Force
 
       - name: Compile 
         run: |
@@ -44,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pp-${{ matrix.os_name }}
-          path: ./artifacts/lib/*/*
+          path: artifacts/lib
           retention-days: 1
 
   collect_files:
