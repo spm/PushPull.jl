@@ -56,7 +56,7 @@ end
 
 
 function basedir()
-    if true
+    if false
         ## Use the following for determining SHA values for Artifacts.toml
         #using Tar, Inflate, SHA
         #filename = "pp_lib.tar.gz";
