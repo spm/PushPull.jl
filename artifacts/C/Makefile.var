@@ -1,24 +1,25 @@
 # Makefile default variables
 
-SHELL        = /bin/sh
-MAKE         = make
-MOSUF        = o
-SOSUF        = so
-AR           = ar rcs
-COPY         = cp -f
-DEL          = rm -f
-MOVE         = mv -f
-MKDIR        = mkdir
-TAR          = tar
-ZIP          = gzip -f
-OMPFLAG      = -fopenmp
-WARNFLAG     = -Wall -Wextra -Wpedantic
-USE_OPENMP  ?= 0
-SONAME       = soname
-NVCC        ?= nvcc
+SHELL       = /bin/sh
+MAKE        = make
+MOSUF       = o
+SOSUF       = so
+AR          = ar rcs
+COPY        = cp -f
+DEL         = rm -f
+MOVE        = mv -f
+MKDIR       = mkdir
+TAR         = tar
+ZIP         = gzip -f
+OMPFLAG     = -fopenmp
+WARNFLAG    = -Wall -Wextra -Wpedantic
+USE_OPENMP ?= 0
+SONAME      = soname
+NVCC        = nvcc
+PTXDIR      = ../lib/ptx
 
 ifndef PLATFORM
-  PLATFORM   = $(shell uname)
+  PLATFORM = $(shell uname)
   ifeq (Darwin,$(PLATFORM))
     ifeq (arm64,$(shell uname -m)) # Check for Apple Silicon
       PLATFORM = arm64
@@ -29,55 +30,50 @@ endif
 
 ##### Linux #####
 ifeq (Linux,$(PLATFORM))
-  PTXDIR     = ../lib/ptxa64
-  LIBDIR     = ../lib/liba64
-  CC         = gcc
-  NVCC      += -m64
+  LIBDIR  = ../lib/liba64
+  CC      = gcc
+  NVCC   += -m64
 endif
 
 
 ##### macOS #####
 ifeq (Darwin,$(PLATFORM))
-  PTXDIR     = ../lib/ptxmaci64
-  LIBDIR     = ../lib/libmaci64
-  MOSUF      = o
-  SOSUF      = dylib
+  LIBDIR  = ../lib/libmaci64
+  MOSUF   = o
+  SOSUF   = dylib
   # https://stackoverflow.com/questions/37362414/
-  OMPFLAG    = -fopenmp=libiomp5
-  CC         = gcc
-  NVCC      += -m64
-  SONAME     = install_name
+  OMPFLAG = -fopenmp=libiomp5
+  CC      = gcc
+  NVCC   += -m64
+  SONAME  = install_name
 endif
 
 ifeq (arm64,$(PLATFORM))
-  PTXDIR     = ../lib/ptxmaca64
-  LIBDIR     = ../lib/libmaca64
-  MOSUF      = o
-  SOSUF      = dylib
+  LIBDIR  = ../lib/libmaca64
+  MOSUF   = o
+  SOSUF   = dylib
   # https://stackoverflow.com/questions/37362414/
-  OMPFLAG    = -fopenmp=libiomp5
-  CC         = gcc
-  NVCC      += -m64
-  SONAME     = install_name
+  OMPFLAG = -fopenmp=libiomp5
+  CC      = gcc
+  NVCC   += -m64
+  SONAME  = install_name
 endif
 
 
 ##### Windows #####
 ifeq (MINGW64,$(word 1,$(subst _, ,$(PLATFORM)))) # MSVC
-  PTXDIR     = ../lib/ptxw64
-  LIBDIR     = ../lib/libw64
-  MOSUF      = obj
-  SOSUF      = dll
-  CC         = x86_64-w64-mingw32-gcc-win32
-  NVCC       = nvcc.exe -m64
+  LIBDIR  = ../lib/libw64
+  MOSUF   = obj
+  SOSUF   = dll
+  CC      = x86_64-w64-mingw32-gcc-win32
+  NVCC    = nvcc.exe -m64
 endif
 
 ifeq (MSYS,$(word 1,$(subst _, ,$(PLATFORM)))) # GCC
-  PTXDIR     = ../lib/ptxw64
-  LIBDIR     = ../lib/libw64
-  MOSUF      = obj
-  SOSUF      = dll
-  NVCC       = nvcc.exe -m64
+  LIBDIR  = ../lib/libw64
+  MOSUF   = obj
+  SOSUF   = dll
+  NVCC    = nvcc.exe -m64
 endif
 
 

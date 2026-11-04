@@ -51,7 +51,7 @@ end
 Return location of ptx files.
 """
 function ptxdir()
-    return joinpath(basedir(), "ptx" * getext())
+    return joinpath(basedir(), "ptx")
 end
 
 
