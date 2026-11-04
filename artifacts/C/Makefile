@@ -12,12 +12,6 @@ PTXFILES = pushpull.ptx lbessi.ptx sparse_operator.ptx TVdenoise3d.ptx TVdenoise
 LIBFILES = pushpull.$(SOSUF) TVdenoise3d.$(SOSUF) sparse_operator.$(SOSUF) blip.$(SOSUF)
 PPLIB    = ../pp_lib.tar.gz
 
-#CUDA_VERSION := $(shell $(NVCC) --version 2> /dev/null)
-#ifndef CUDA_VERSION
-#	PTXFILES =
-	PTXDIR =
-#endif
-
 all: $(LIBFILES)
 
 ptx: $(PTXFILES)
