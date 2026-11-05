@@ -262,7 +262,7 @@ end
 """
     affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer}, sett::Settings = Settings())
 
-This function is still work in progress.
+This function is still work in progress - particuarly its differentiation.
 
 """
 function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3,Integer},
@@ -306,7 +306,12 @@ function affine_pull(f₀::Array{Float32}, Aff::Array{Float32,2}, d₁::NTuple{3
     return f₁
 end
 
+"""
+    affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer}, sett::Settings = Settings())
 
+This function is still work in progress - particuarly its differentiation.
+
+"""
 function affine_push(f₁::Array{Float32}, Aff::Array{Float32,2}, d₀::NTuple{3,Integer},
                      sett::Settings = Settings())::Array{Float32}
 

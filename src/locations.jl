@@ -24,7 +24,7 @@ function getext()
     if word==64
         os = os * "64"
     elseif word==32
-        od = os * "32"
+        os = os * "32"
     else
         error("not yet sure what to do for this word length")
     end

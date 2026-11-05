@@ -20,7 +20,7 @@ function TVdenoise!(x::Union{Array{Float32,3},Array{Float32,4}}, y::Union{Array{
 
     if isa(lambdap,Real)
         lambdap = Float32(lambdap).*ones(Float32,nlam)
-    elseif isa(Lambda,Array) || isa(Lambda,NTuple)
+    elseif isa(lambdap,Array) || isa(lambdap,NTuple)
         if length(Lambda)~=d[4]
             error("incompatible size of lambdap")
         end
@@ -31,8 +31,8 @@ function TVdenoise!(x::Union{Array{Float32,3},Array{Float32,4}}, y::Union{Array{
 
     if isa(lambdal,Real)
         lambdal = Float32(lambdal).*ones(Float32,nlam)
-    elseif isa(Lambda,Array) || isa(Lambda,NTuple)
-        if length(Lambda)~=d[4]
+    elseif isa(lambdal,Array) || isa(lambdal,NTuple)
+        if length(lambdal)~=d[4]
             error("incompatible size of lambdal")
         end
         lambdal = [Float32.(lambdal)..., zeros(Float32,nlam-length(lambdal))...]

@@ -62,7 +62,7 @@ end
 
 function sett_chan(sett::Settings, c::Integer)
     if length(sett.bnd)==1
-        return Settings
+        return Settings(sett.deg, sett.bnd[1], sett.ext)
     else
         return Settings(sett.deg, sett.bnd[c], sett.ext)
     end
