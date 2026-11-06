@@ -16,12 +16,12 @@ __device__ void TVdenoise3d_fast_dev(USIZE_t i, USIZE_t j, USIZE_t k, float y[],
     float rv0 = 1.0f/vox[0]/vox[0], rv1 = 1.0f/vox[1]/vox[1], rv2 = 1.0f/vox[2]/vox[2];
     SSIZE_t i1p, i1n, j1p, j1n, k1p, k1n;
 
-    i1n = (i>0)    ?  -1  : 0;
-    i1p = (i<d[0]) ?   1  : 0;
-    j1n = (j>0)    ? -d0  : 0;
-    j1p = (j<d[1]) ?  d0  : 0;
-    k1n = (k>0)    ? -d01 : 0;
-    k1p = (k<d[2]) ?  d01 : 0;
+    i1n = (i>0)      ?  -1  : 0;
+    i1p = (i<d[0]-1) ?   1  : 0;
+    j1n = (j>0)      ? -d0  : 0;
+    j1p = (j<d[1]-1) ?  d0  : 0;
+    k1n = (k>0)      ? -d01 : 0;
+    k1p = (k<d[2]-1) ?  d01 : 0;
 
     for(m=0, yp=y+ijk; m<d[3]; m++, yp+=n)
     {
@@ -98,12 +98,12 @@ __device__ void TVdenoise3d_dev(USIZE_t i, USIZE_t j, USIZE_t k, float y[], cons
     float rv0 = 1.0f/vox[0]/vox[0], rv1 = 1.0f/vox[1]/vox[1], rv2 = 1.0f/vox[2]/vox[2];
     SSIZE_t i1p, i1n, j1p, j1n, k1p, k1n;
 
-    i1n = (i>0)    ?  -1  : 0;
-    i1p = (i<d[0]) ?   1  : 0;
-    j1n = (j>0)    ? -d0  : 0;
-    j1p = (j<d[1]) ?  d0  : 0;
-    k1n = (k>0)    ? -d01 : 0;
-    k1p = (k<d[2]) ?  d01 : 0;
+    i1n = (i>0)      ?  -1  : 0;
+    i1p = (i<d[0]-1) ?   1  : 0;
+    j1n = (j>0)      ? -d0  : 0;
+    j1p = (j<d[1]-1) ?  d0  : 0;
+    k1n = (k>0)      ? -d01 : 0;
+    k1p = (k<d[2]-1) ?  d01 : 0;
 
     /*
         Solving the L1 regularisation problem involves minimising |y| = \frac{y^2}{2\eta} + \frac{\eta}{2}.
