@@ -48,7 +48,7 @@ function PushPull.TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}},
         error("wrong type of lambdal")
     end
 
-    d1      = UInt64.(ceil.((d[1:3].-2)./2))
+    d1      = UInt64.(cld.(d,2))
     threads, blocks = getthreads(d1, cutv3d)
 
     setindex!(CuGlobal{NTuple{   4, UInt64}}(tvmod,"d"),        UInt64.(d))
@@ -83,7 +83,7 @@ function getthreads(d::CuDim, fun::CuFunction, shmem::Integer=0, dev::CuDevice=C
 
     if isa(d,Integer)
         threads = nmax
-        blocks  = Int32.(ceil.(d./threads))
+        blocks  = Int32.(cld.(d, threads))
     else
         @assert(length(d)==3,"Wrong sized dimensions.")
         s = ones(Int64,length(d))
@@ -104,7 +104,7 @@ function getthreads(d::CuDim, fun::CuFunction, shmem::Integer=0, dev::CuDevice=C
             end
         end
         threads = (s...,)
-        blocks  = Int32.(ceil.(d./threads))
+        blocks  = Int32.(cld.(d, threads))
     end
     return threads, blocks
 end
