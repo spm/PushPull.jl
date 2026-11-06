@@ -48,7 +48,7 @@ function PushPull.TVdenoise!(x::Union{CuArray{Float32,3},CuArray{Float32,4}},
         error("wrong type of lambdal")
     end
 
-    d1      = UInt64.(cld.(d,2))
+    d1      = UInt64.(cld.(d[1:3],2))
     threads, blocks = getthreads(d1, cutv3d)
 
     setindex!(CuGlobal{NTuple{   4, UInt64}}(tvmod,"d"),        UInt64.(d))
