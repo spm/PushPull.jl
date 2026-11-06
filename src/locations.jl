@@ -1,6 +1,6 @@
 using Libdl
 #using Artifacts
-using LazyArtifacts
+#using LazyArtifacts
 
 
 # Doesn't work with ptx files named according to MATLAB's conventions.
